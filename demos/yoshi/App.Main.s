@@ -30,6 +30,19 @@ PlayerGlobalY equ 22
 PlayerScreenX equ 24
 PlayerScreenY equ 26
 
+EnemyGlobalX equ  28
+EnemyGlobalY equ  30
+EnemyScreenX equ  32
+EnemyScreenY equ  34
+EnemyState  equ 36      ; 0=patrol, 1=chase
+EnemySpeed  equ 38      ; movement speed (1=patrol, 3 for chase)
+EnemyPatrolMin equ  40
+EnemyPatrolMax equ  42     
+EnemyDirection equ  44    ;0=moving left, 1=right
+EnemyFlags     equ  46
+SpriteTmpAddr equ   48
+
+
 ; Constants
 DEADZONE_LEFT equ 54
 DEADZONE_RIGHT equ 90
@@ -42,6 +55,22 @@ MAX_SPRITES equ 16
 PLAYER_SLOT equ 0
 PLAYER_SPRITE_ID equ {SPRITE_16X16+151}
 PLAYER_VBUFF equ VBUFF_SPRITE_START+0*VBUFF_SPRITE_STEP
+
+; Enemy
+ENEMY_SLOT_1 equ  1
+ENEMY_SPRITE_ID equ {SPRITE_16X16+276}
+ENEMY_VBUFF equ VBUFF_SPRITE_START+1*VBUFF_SPRITE_STEP
+
+; AI enum
+STATE_PATROL equ  0
+STATE_CHASE equ   1
+
+; AI Behavior
+ENEMY_SPEED_PATROL equ  1
+ENEMY_SPEED_CHASE equ 3
+DETECTION_RANGE equ 64
+ESCAPE_RANGE equ 96
+
 
 ; Keycodes
 LEFT_ARROW    equ   $08
@@ -114,28 +143,10 @@ Main
             stz   ScreenX
             stz   ScreenY
 
-*             lda   #80
-*             sta   PlayerScreenX
-*             lda   #100
-*             sta   PlayerScreenY
-
-* ; Calculate initial scroll position
-*             lda   PlayerGlobalX
-*             sec
-*             sbc   PlayerScreenX
-*             sta   ScreenX
-
-*             lda   PlayerGlobalY
-*             sec
-*             sbc   PlayerScreenY
-*             bpl   :initial_y_ok         ; if positive, ok
-*             lda   #0
-* :initial_y_ok            
-*             sta   ScreenY            
-
             jsr   UpdateCamera
 
             jsr   InitSprites
+            jsr   InitEnemy
 
 :eventloop
             pha
@@ -265,6 +276,11 @@ Main
             pea   PLAYER_SLOT
             pei   PlayerScreenX
             pei   PlayerScreenY
+            _GTEMoveSprite
+
+            pea   ENEMY_SLOT_1
+            pei   EnemyScreenX
+            pei   EnemyScreenY
             _GTEMoveSprite
 
             pei   ScreenX               ; BG0 X-origin
@@ -814,6 +830,63 @@ BuildDebugStr
             sta   DebugStr2
 
             rep   #$20             ; Back to 16-bit A
+            rts
+
+; ========================================
+; ENEMY AI FUNCTIONS
+; ========================================
+
+InitEnemy
+; create sprite stamp: TODO!
+            pea   ENEMY_SPRITE_ID
+            pea   ENEMY_VBUFF
+            _GTECreateSpriteStamp
+
+            ; compiled
+            lda   #SPRITE_16X16+SPRITE_COMPILED
+            sta   EnemyFlags
+            pha           ; Space for result
+            pea   SPRITE_16X16
+            pea   ENEMY_VBUFF
+            _GTECompileSpriteStamp
+            pla
+            sta   SpriteTmpAddr
+            
+            ; position and state
+            lda   #80
+            sta   EnemyGlobalX
+            lda   #100
+            sta   EnemyGlobalY
+
+            lda   #150
+            sta   EnemyPatrolMin
+            lda   #350
+            sta   EnemyPatrolMax
+
+            stz   EnemyDirection
+            stz   EnemyState
+
+            lda   #ENEMY_SPEED_PATROL
+            sta   EnemySpeed
+
+            ; calculate screen pos
+            lda   EnemyGlobalX
+            sec
+            sbc   ScreenX
+            sta   EnemyScreenX
+            lda   EnemyGlobalY
+            sec
+            sbc   ScreenY
+            sta   EnemyScreenY
+
+            ; add to screen
+            pea   ENEMY_SLOT_1
+            pei   EnemyFlags
+            pei   SpriteTmpAddr
+            pei   EnemyScreenX
+            pei   EnemyScreenY
+            _GTEAddSprite
+
             rts
 
 MyDirectPage    ds    2
