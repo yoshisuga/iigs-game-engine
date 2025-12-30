@@ -84,7 +84,7 @@ Main
             plb
 
             bra :start
-            dfb $B0,$0B,$1E,$55
+            dfb $AA,$BB,$CC,$DD       ; for finding this in the debugger
 
 :start
             sta   MyUserId
