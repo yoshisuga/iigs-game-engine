@@ -312,6 +312,11 @@ Main
             ldy   #$ffff
             jsr   DrawString
 
+            lda   #TestStr
+            ldx   #160*170
+            ldy   #$ffff
+            jsr   DrawString
+
             brl :eventloop
 
 ; Shut down everything
@@ -848,7 +853,7 @@ BuildDebugStr
             sep   #$20
             sta   DebugStr2+29
 
-            lda   #30
+            lda   #29
             sta   DebugStr2             ; Update length
 
             rep   #$20             ; Back to 16-bit A
@@ -1130,7 +1135,7 @@ MyDirectPage    ds    2
 MyUserId        ds    2
 Tmp0            ds    2
 Tmp1            ds    2
-TestStr         str   'YOSHI TESTING'
+TestStr         str   'YS 2 TEST BY YOSHI SUGAWARA'
 NumStr          ds    5
 DebugStr        ds    64
 DebugStr2       ds    64
