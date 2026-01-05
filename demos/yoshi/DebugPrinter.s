@@ -345,7 +345,21 @@ BuildDebugStr
             sep   #$20
             sta   DebugStr2+29
 
-            lda   #29
+            lda   #' '
+            sta   DebugStr2+30
+            lda   #'D'
+            sta   DebugStr2+31
+            lda   #'I'
+            sta   DebugStr2+32
+            lda   #'R'
+            lda   #':'
+            sta   DebugStr2+33
+            lda   PlayerDirection
+            clc
+            adc   #'0'
+            sta   DebugStr2+34
+
+            lda   #34
             sta   DebugStr2             ; Update length
 
             rep   #$20             ; Back to 16-bit A

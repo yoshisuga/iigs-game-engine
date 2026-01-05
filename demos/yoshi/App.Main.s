@@ -44,6 +44,7 @@ SpriteTmpAddr equ   48
 EnemyFrameCount equ 50
 AdolTmpAddr equ 52
 
+PlayerDirection equ 54
 
 ; Constants
 DEADZONE_LEFT equ 54
@@ -55,15 +56,16 @@ MAX_SCROLL_Y equ 512       ; 640 - 128 (world height in pixels - screen height)
 
 MAX_SPRITES equ 16
 PLAYER_SLOT equ 0
-PLAYER_SPRITE_ID equ {SPRITE_16X16+151}
+PLAYER_BOT_SLOT equ 1
+PLAYER_SPRITE_ID equ {SPRITE_16X16+1}
+PLAYER_SPRITE_BOT_ID equ {SPRITE_16X8+65}
 PLAYER_VBUFF equ VBUFF_SPRITE_START+0*VBUFF_SPRITE_STEP
-
-ADOL_TEST_VBUFF equ VBUFF_SPRITE_START+2*VBUFF_SPRITE_STEP
+PLAYER_BOT_VBUFF equ VBUFF_SPRITE_START+1*VBUFF_SPRITE_STEP
 
 ; Enemy
-ENEMY_SLOT_1 equ  1
-ENEMY_SPRITE_ID equ {SPRITE_16X16+276}
-ENEMY_VBUFF equ VBUFF_SPRITE_START+1*VBUFF_SPRITE_STEP
+ENEMY_SLOT_1 equ  2
+ENEMY_SPRITE_ID equ {SPRITE_16X16+145}
+ENEMY_VBUFF equ VBUFF_SPRITE_START+3*VBUFF_SPRITE_STEP
 
 ; AI enum
 STATE_PATROL equ  0
@@ -81,6 +83,13 @@ LEFT_ARROW    equ   $08
 RIGHT_ARROW   equ   $15
 UP_ARROW      equ   $0B
 DOWN_ARROW    equ   $0A
+
+; Player Direction enums
+DIR_DOWN  equ 0
+DIR_LEFT  equ 1
+DIR_RIGHT   equ 2
+DIR_UP    equ 3
+
 
 Main
             phk
@@ -123,12 +132,6 @@ Main
             pea   #LanceVillageTiles
             _GTELoadTileSet
 
-            pea   383
-            pea   512
-            pea   #^AdolTiles         ;high word
-            pea   #AdolTiles          ;low word
-            _GTELoadTileSet
-
 ; Set the palette
             pea   $0000
             pea   #^LanceVillagePalette
@@ -145,9 +148,9 @@ Main
             sta   PlayerSpeed
 
 ; start player at world position
-            lda   #64
+            lda   #32
             sta   PlayerGlobalX
-            lda   #120
+            lda   #60
             sta   PlayerGlobalY
 
             stz   ScreenX
@@ -163,11 +166,8 @@ Main
             jsr   UpdateEnemy
 
 ; Move the sprite
-            pea   PLAYER_SLOT
-            pei   PlayerScreenX
-            pei   PlayerScreenY
-            _GTEMoveSprite
-
+            jsr   MovePlayer
+            
             pea   ENEMY_SLOT_1
             pei   EnemyScreenX
             pei   EnemyScreenY
@@ -213,7 +213,7 @@ SetLimits
 InitSprites
 ; Create sprite stamp from tile data
             pea   PLAYER_SPRITE_ID       ; Sprite tile ID (SPRITE_16X16+TileIndex)
-            pea   VBUFF_SPRITE_START     ; Virtual buffer address
+            pea   PLAYER_VBUFF     ; Virtual buffer address
             _GTECreateSpriteStamp
 
 ; Compile the sprite for fast rendering
@@ -221,7 +221,7 @@ InitSprites
             sta   SpriteFlags
             pha                          ; Space for result
             pea   SPRITE_16X16           ; Sprite size
-            pea   VBUFF_SPRITE_START     ; Source vbuff
+            pea   PLAYER_VBUFF     ; Source vbuff
             _GTECompileSpriteStamp
             pla
             sta   SpriteAddr             ; Save compiled sprite address
@@ -234,93 +234,48 @@ InitSprites
             pei   PlayerScreenY                ; Y position (100)
             _GTEAddSprite
 
+; add bottom part of sprite (composite)
+            pea   PLAYER_SPRITE_BOT_ID       ; Sprite tile ID (SPRITE_16X16+TileIndex)
+            pea   PLAYER_BOT_VBUFF     ; Virtual buffer address
+            _GTECreateSpriteStamp
+
+            lda   #SPRITE_16X8+SPRITE_COMPILED
+            sta   SpriteFlags
+            pha
+            pea   SPRITE_16X8
+            pea   PLAYER_BOT_VBUFF
+            _GTECompileSpriteStamp
+            pla
+            sta   SpriteAddr
+
+            lda   PlayerScreenY
+            clc
+            adc   #15
+
+            pea   PLAYER_BOT_SLOT
+            pei   SpriteFlags
+            pei   SpriteAddr
+            pei   PlayerScreenX
+            pha
+            _GTEAddSprite
+
             jsr   InitEnemy
-            jsr   TestAdolSprite
             rts
 
-TestAdolSprite
-            ;create sprite stamp
-            pea   {SPRITE_16X16+384}
-            pea   #ADOL_TEST_VBUFF
-            _GTECreateSpriteStamp
+MovePlayer
+            pea   PLAYER_SLOT
+            pei   PlayerScreenX
+            pei   PlayerScreenY
+            _GTEMoveSprite
 
-            lda   #SPRITE_16X16+SPRITE_COMPILED
-            sta   SpriteFlags
-            pha                          ; Space for result
-            pea   SPRITE_16X16           ; Sprite size
-            pea   ADOL_TEST_VBUFF     ; Source vbuff
-            _GTECompileSpriteStamp
-            pla
-            sta   AdolTmpAddr             ; Save compiled sprite address
+            lda   PlayerScreenY
+            clc
+            adc   #15
 
-            * ;add sprite
-            pea   #2            ; Sprite slot
-            pei   SpriteFlags            ; Flags (SPRITE_16X16+SPRITE_COMPILED)
-            pei   AdolTmpAddr             ; Compiled sprite address
-            pea   #40
-            pea   #60
-            _GTEAddSprite
-
-            ;create sprite stamp (upper right)
-            pea   {SPRITE_16X16+386}
-            pea   #ADOL_TEST_VBUFF+VBUFF_SPRITE_STEP
-            _GTECreateSpriteStamp
-
-            lda   #SPRITE_16X16+SPRITE_COMPILED
-            sta   SpriteFlags
-            pha                          ; Space for result
-            pea   SPRITE_16X16           ; Sprite size
-            pea   ADOL_TEST_VBUFF+VBUFF_SPRITE_STEP     ; Source vbuff
-            _GTECompileSpriteStamp
-            pla
-            sta   AdolTmpAddr             ; Save compiled sprite address
-
-            * ;add sprite
-            pea   #3            ; Sprite slot
-            pei   SpriteFlags            ; Flags (SPRITE_16X16+SPRITE_COMPILED)
-            pei   AdolTmpAddr             ; Compiled sprite address
-            pea   #48
-            pea   #60
-            _GTEAddSprite
-
-           ;create sprite stamp (lower left)
-            pea   {SPRITE_16X16+448}
-            pea   #ADOL_TEST_VBUFF+2*VBUFF_SPRITE_STEP
-            _GTECreateSpriteStamp
-            lda   #SPRITE_16X16+SPRITE_COMPILED
-            sta   SpriteFlags
-            pha                          ; Space for result
-            pea   SPRITE_16X16           ; Sprite size
-            pea   ADOL_TEST_VBUFF+2*VBUFF_SPRITE_STEP     ; Source vbuff
-            _GTECompileSpriteStamp
-            pla
-            sta   AdolTmpAddr             ; Save compiled sprite address
-            pea   #4            ; Sprite slot
-            pei   SpriteFlags            ; Flags (SPRITE_16X16+SPRITE_COMPILED)
-            pei   AdolTmpAddr             ; Compiled sprite address
-            pea   #40
-            pea   #75
-            _GTEAddSprite
-
-           ;create sprite stamp (lower left)
-            pea   {SPRITE_16X16+450}
-            pea   #ADOL_TEST_VBUFF+3*VBUFF_SPRITE_STEP
-            _GTECreateSpriteStamp
-            lda   #SPRITE_16X16+SPRITE_COMPILED
-            sta   SpriteFlags
-            pha                          ; Space for result
-            pea   SPRITE_16X16           ; Sprite size
-            pea   ADOL_TEST_VBUFF+3*VBUFF_SPRITE_STEP     ; Source vbuff
-            _GTECompileSpriteStamp
-            pla
-            sta   AdolTmpAddr             ; Save compiled sprite address
-            pea   #5            ; Sprite slot
-            pei   SpriteFlags            ; Flags (SPRITE_16X16+SPRITE_COMPILED)
-            pei   AdolTmpAddr             ; Compiled sprite address
-            pea   #48
-            pea   #75
-            _GTEAddSprite
-
+            pea   PLAYER_BOT_SLOT
+            pei   PlayerScreenX
+            pha
+            _GTEMoveSprite
             rts
 
 UpdateCamera
@@ -426,9 +381,6 @@ UpdateCamera
 :done
             rts
 
-; Params:
-; X = pixel X, Y = pixel Y
-; Output: Carry clear if passable, set if solid
 CheckTileCollision
             pha       ; Space for result
             phx       ; push x
@@ -437,18 +389,31 @@ CheckTileCollision
             pla       ; get tile data
             and   #TILE_ID_MASK
 
-; temp return to disable
-            * clc
-            * rts
-
             cmp   #0
             beq   :solid
-            cmp   #3
-            bcc   :passable   ; ID < 2 passable (1-2)
-            cmp   #33
-            bcc   :solid   ; ID < 33
-            cmp   #35
-            bcc   :passable ; ID < 35 (33-34)
+
+            ; Check 104-106 (passable)
+            cmp   #104
+            bcc   :solid    ; < 104, solid
+            cmp   #107
+            bcc   :passable ; 104-106, passable
+
+            cmp   #110
+            bcc   :solid    ; 107-108, solid
+            cmp   #112
+            bcc   :passable ; 109-110, passable
+
+            cmp   #126
+            bcc   :solid    
+            cmp   #128
+            bcc   :passable
+
+            cmp   #135
+            beq   :passable
+
+            ; Everything else is solid
+            bra   :solid
+
 :solid      sec
             rts
 :passable
@@ -469,6 +434,5 @@ DebugStr2       ds    64
             PUT   InputHandler.s
             PUT   Enemy.s
             PUT   DebugPrinter.s
-            PUT   gen/LanceVillage.TileMap.s
-            PUT   gen/Sprite.Adol.remapped.s
+            PUT   gen/LanceVillagePCE.TileMap.s
             PUT   font.s
