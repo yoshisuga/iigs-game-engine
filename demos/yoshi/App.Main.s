@@ -42,6 +42,7 @@ EnemyDirection equ  44    ;0=moving left, 1=right
 EnemyFlags     equ  46
 SpriteTmpAddr equ   48
 EnemyFrameCount equ 50
+AdolTmpAddr equ 52
 
 
 ; Constants
@@ -56,6 +57,8 @@ MAX_SPRITES equ 16
 PLAYER_SLOT equ 0
 PLAYER_SPRITE_ID equ {SPRITE_16X16+151}
 PLAYER_VBUFF equ VBUFF_SPRITE_START+0*VBUFF_SPRITE_STEP
+
+ADOL_TEST_VBUFF equ VBUFF_SPRITE_START+2*VBUFF_SPRITE_STEP
 
 ; Enemy
 ENEMY_SLOT_1 equ  1
@@ -118,6 +121,12 @@ Main
             pea   489
             pea   #^LanceVillageTiles
             pea   #LanceVillageTiles
+            _GTELoadTileSet
+
+            pea   383
+            pea   512
+            pea   #^AdolTiles         ;high word
+            pea   #AdolTiles          ;low word
             _GTELoadTileSet
 
 ; Set the palette
@@ -226,6 +235,92 @@ InitSprites
             _GTEAddSprite
 
             jsr   InitEnemy
+            jsr   TestAdolSprite
+            rts
+
+TestAdolSprite
+            ;create sprite stamp
+            pea   {SPRITE_16X16+384}
+            pea   #ADOL_TEST_VBUFF
+            _GTECreateSpriteStamp
+
+            lda   #SPRITE_16X16+SPRITE_COMPILED
+            sta   SpriteFlags
+            pha                          ; Space for result
+            pea   SPRITE_16X16           ; Sprite size
+            pea   ADOL_TEST_VBUFF     ; Source vbuff
+            _GTECompileSpriteStamp
+            pla
+            sta   AdolTmpAddr             ; Save compiled sprite address
+
+            * ;add sprite
+            pea   #2            ; Sprite slot
+            pei   SpriteFlags            ; Flags (SPRITE_16X16+SPRITE_COMPILED)
+            pei   AdolTmpAddr             ; Compiled sprite address
+            pea   #40
+            pea   #60
+            _GTEAddSprite
+
+            ;create sprite stamp (upper right)
+            pea   {SPRITE_16X16+386}
+            pea   #ADOL_TEST_VBUFF+VBUFF_SPRITE_STEP
+            _GTECreateSpriteStamp
+
+            lda   #SPRITE_16X16+SPRITE_COMPILED
+            sta   SpriteFlags
+            pha                          ; Space for result
+            pea   SPRITE_16X16           ; Sprite size
+            pea   ADOL_TEST_VBUFF+VBUFF_SPRITE_STEP     ; Source vbuff
+            _GTECompileSpriteStamp
+            pla
+            sta   AdolTmpAddr             ; Save compiled sprite address
+
+            * ;add sprite
+            pea   #3            ; Sprite slot
+            pei   SpriteFlags            ; Flags (SPRITE_16X16+SPRITE_COMPILED)
+            pei   AdolTmpAddr             ; Compiled sprite address
+            pea   #48
+            pea   #60
+            _GTEAddSprite
+
+           ;create sprite stamp (lower left)
+            pea   {SPRITE_16X16+448}
+            pea   #ADOL_TEST_VBUFF+2*VBUFF_SPRITE_STEP
+            _GTECreateSpriteStamp
+            lda   #SPRITE_16X16+SPRITE_COMPILED
+            sta   SpriteFlags
+            pha                          ; Space for result
+            pea   SPRITE_16X16           ; Sprite size
+            pea   ADOL_TEST_VBUFF+2*VBUFF_SPRITE_STEP     ; Source vbuff
+            _GTECompileSpriteStamp
+            pla
+            sta   AdolTmpAddr             ; Save compiled sprite address
+            pea   #4            ; Sprite slot
+            pei   SpriteFlags            ; Flags (SPRITE_16X16+SPRITE_COMPILED)
+            pei   AdolTmpAddr             ; Compiled sprite address
+            pea   #40
+            pea   #75
+            _GTEAddSprite
+
+           ;create sprite stamp (lower left)
+            pea   {SPRITE_16X16+450}
+            pea   #ADOL_TEST_VBUFF+3*VBUFF_SPRITE_STEP
+            _GTECreateSpriteStamp
+            lda   #SPRITE_16X16+SPRITE_COMPILED
+            sta   SpriteFlags
+            pha                          ; Space for result
+            pea   SPRITE_16X16           ; Sprite size
+            pea   ADOL_TEST_VBUFF+3*VBUFF_SPRITE_STEP     ; Source vbuff
+            _GTECompileSpriteStamp
+            pla
+            sta   AdolTmpAddr             ; Save compiled sprite address
+            pea   #5            ; Sprite slot
+            pei   SpriteFlags            ; Flags (SPRITE_16X16+SPRITE_COMPILED)
+            pei   AdolTmpAddr             ; Compiled sprite address
+            pea   #48
+            pea   #75
+            _GTEAddSprite
+
             rts
 
 UpdateCamera
@@ -375,4 +470,5 @@ DebugStr2       ds    64
             PUT   Enemy.s
             PUT   DebugPrinter.s
             PUT   gen/LanceVillage.TileMap.s
+            PUT   gen/Sprite.Adol.remapped.s
             PUT   font.s
