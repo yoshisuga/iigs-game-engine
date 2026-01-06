@@ -45,6 +45,13 @@ EnemyFrameCount equ 50
 AdolTmpAddr equ 52
 
 PlayerDirection equ 54
+PlayerFrame equ 56
+PlayerAnimTimer equ 58
+
+Tmp0    equ 60
+Tmp1    equ 62
+Tmp2    equ 64
+Tmp3 equ 66
 
 ; Constants
 DEADZONE_LEFT equ 54
@@ -60,7 +67,9 @@ PLAYER_BOT_SLOT equ 1
 PLAYER_SPRITE_ID equ {SPRITE_16X16+1}
 PLAYER_SPRITE_BOT_ID equ {SPRITE_16X8+65}
 PLAYER_VBUFF equ VBUFF_SPRITE_START+0*VBUFF_SPRITE_STEP
+PLAYER_VBUFF_1  equ VBUFF_SPRITE_START+4*VBUFF_SPRITE_STEP
 PLAYER_BOT_VBUFF equ VBUFF_SPRITE_START+1*VBUFF_SPRITE_STEP
+PLAYER_BOT_VBUFF_1 equ VBUFF_SPRITE_START+5*VBUFF_SPRITE_STEP
 
 ; Enemy
 ENEMY_SLOT_1 equ  2
@@ -90,6 +99,7 @@ DIR_LEFT  equ 1
 DIR_RIGHT   equ 2
 DIR_UP    equ 3
 
+ANIM_SPEED equ 8
 
 Main
             phk
@@ -115,6 +125,10 @@ Main
             stz   ScreenX                ; Initialize scroll position X
             stz   ScreenY                ; Initialize scroll position Y
 
+            stz   PlayerDirection
+            stz   PlayerFrame
+            stz   PlayerAnimTimer
+
             _MTStartUp
 
             lda   #ENGINE_MODE_USER_TOOL
@@ -127,7 +141,7 @@ Main
             _GTESetScreenMode
 
             pea   0
-            pea   489
+            pea   511
             pea   #^LanceVillageTiles
             pea   #LanceVillageTiles
             _GTELoadTileSet
@@ -163,6 +177,7 @@ Main
 
             jsr   HandleInput
             jsr   UpdateCamera
+            jsr   UpdatePlayerAnimation
             jsr   UpdateEnemy
 
 ; Move the sprite
@@ -210,55 +225,220 @@ SetLimits
                 sta   ScreenHeight
                 rts
 
-InitSprites
-; Create sprite stamp from tile data
-            pea   PLAYER_SPRITE_ID       ; Sprite tile ID (SPRITE_16X16+TileIndex)
-            pea   PLAYER_VBUFF     ; Virtual buffer address
+InitPlayerSpriteFrames
+; Precompile all 9 animation frames
+            ldx   #0
+:compile_loop
+            phx         ; Preserve X across all GTE calls
+; calc tile IDs from lookup table
+            txa
+            asl         ; x2 for index
+            asl         ; x4 = 4 bytes per entry
+            tay
+
+            lda   AnimFrames,y      ; top tile id
+            sta   Tmp0
+            lda   AnimFrames+2,y     ; bottom tile id
+            sta   Tmp1
+            
+; TOP PORTION
+            lda   Tmp0
+            ora   #SPRITE_16X16         ; ora combines high bits (sprite flags) with low bits (tile id) - Tmp0 has tileID
+            pha
+
+            cpx   #0
+            beq   :use_vbuff_0
+            lda   #PLAYER_VBUFF_1
+            bra   :store_vbuff
+:use_vbuff_0
+            lda   #PLAYER_VBUFF
+:store_vbuff
+            sta   Tmp2
+            pha
+
+            * lda   #PLAYER_VBUFF
+            * sta   Tmp2              ; vbuff address
+            * pha
             _GTECreateSpriteStamp
 
-; Compile the sprite for fast rendering
-            lda   #SPRITE_16X16+SPRITE_COMPILED
-            sta   SpriteFlags
-            pha                          ; Space for result
-            pea   SPRITE_16X16           ; Sprite size
-            pea   PLAYER_VBUFF     ; Source vbuff
+            pha         ; space for result
+            pea   SPRITE_16X16
+            pei   Tmp2
             _GTECompileSpriteStamp
-            pla
-            sta   SpriteAddr             ; Save compiled sprite address
 
-; Add sprite to screen
-            pea   PLAYER_SLOT            ; Sprite slot 0
-            pei   SpriteFlags            ; Flags (SPRITE_16X16+SPRITE_COMPILED)
-            pei   SpriteAddr             ; Compiled sprite address
-            pei   PlayerScreenX                ; X position (80)
-            pei   PlayerScreenY                ; Y position (100)
-            _GTEAddSprite
+            pla         ; compiled address
+            pha         ; save on stack to use later
+            txa         ; A = frame number
+            asl         ; double it for the byte offset since we use words
+            tay         ; Y = byte offset
+            pla         ; get back compiled address
+            sta   PlayerTopSprites,y
+; BOTTOM PORTION
+            lda   Tmp1
+            ora   #SPRITE_16X8
+            pha
 
-; add bottom part of sprite (composite)
-            pea   PLAYER_SPRITE_BOT_ID       ; Sprite tile ID (SPRITE_16X16+TileIndex)
-            pea   PLAYER_BOT_VBUFF     ; Virtual buffer address
+            cpx   #0
+            beq   :use_vbuffbot_0
+            lda   #PLAYER_BOT_VBUFF_1
+            bra   :store_vbuffbot
+:use_vbuffbot_0
+            lda   #PLAYER_BOT_VBUFF
+:store_vbuffbot
+            sta   Tmp2
+            pha
+
+            * lda   #PLAYER_BOT_VBUFF
+            * sta   Tmp2
+            * pha
             _GTECreateSpriteStamp
 
-            lda   #SPRITE_16X8+SPRITE_COMPILED
-            sta   SpriteFlags
             pha
             pea   SPRITE_16X8
-            pea   PLAYER_BOT_VBUFF
+            pei   Tmp2
             _GTECompileSpriteStamp
-            pla
+
+            pla         ; compiled address
+            pha         ; save on stack to use later
+            txa         ; A = frame number
+            asl         ; double it for the byte offset since we use words
+            tay         ; Y = byte offset
+            pla         ; get back compiled address
+            sta   PlayerBotSprites,y
+
+; handle HFLIPPED versions for right facing
+; frames 6-8 need HFLIP
+            cpx   #6
+            bcc   :next_frame
+            cpx   #9
+            bcs   :next_frame
+            stx   Tmp3              ; Save X (frame number) for HFLIP section
+; Compile HFLIP top
+            lda   Tmp0
+            ora   #SPRITE_16X16+SPRITE_HFLIP
+            pha
+            lda  #PLAYER_VBUFF
+            sta  Tmp2
+            pha
+            _GTECreateSpriteStamp
+
+            pha
+            pea   SPRITE_16X16
+            pei   Tmp2
+            _GTECompileSpriteStamp
+
+            pla         ; compiled address
+            pha         ; save on stack to use later
+            lda   Tmp3              ; A = frame number (from saved value)
+            asl         ; double it for the byte offset since we use words
+            tay         ; Y = byte offset
+            pla         ; get back compiled address
+            sta   PlayerTopSprites+18,Y
+; Compile HFLIP bot
+            lda   Tmp1
+            ora   #SPRITE_16X8+SPRITE_HFLIP
+            pha
+            lda   #PLAYER_BOT_VBUFF
+            sta   Tmp2
+            pha
+            _GTECreateSpriteStamp
+
+            pha
+            pea   SPRITE_16X8
+            pei   Tmp2
+            _GTECompileSpriteStamp
+
+            pla         ; compiled address
+            pha         ; save on stack to use later
+            lda   Tmp3              ; A = frame number (from saved value)
+            asl         ; double it for the byte offset since we use words
+            tay         ; Y = byte offset
+            pla         ; get back compiled address
+            sta   PlayerBotSprites+18,y
+:next_frame
+            plx         ; Restore X (loop counter)
+            inx
+            cpx   #12
+            bcs   :done_loop
+            jmp   :compile_loop
+
+:done_loop
+; Now add the initial sprite (frame 0, facing down)
+            lda   PlayerTopSprites
             sta   SpriteAddr
 
+            pea   PLAYER_SLOT
+            lda   #SPRITE_16X16+SPRITE_COMPILED
+            pha
+            pei   SpriteAddr
+            pei   PlayerScreenX
+            pei   PlayerScreenY
+            _GTEAddSprite
+
+            lda   PlayerBotSprites
+            sta   SpriteAddr
+
+            pea   PLAYER_BOT_SLOT
+            lda   #SPRITE_16X8+SPRITE_COMPILED
+            pha
+            pei   SpriteAddr
+            pei   PlayerScreenX
             lda   PlayerScreenY
             clc
             adc   #15
-
-            pea   PLAYER_BOT_SLOT
-            pei   SpriteFlags
-            pei   SpriteAddr
-            pei   PlayerScreenX
             pha
             _GTEAddSprite
+            rts
 
+InitSprites
+* ; Create sprite stamp from tile data
+*             pea   PLAYER_SPRITE_ID       ; Sprite tile ID (SPRITE_16X16+TileIndex)
+*             pea   PLAYER_VBUFF     ; Virtual buffer address
+*             _GTECreateSpriteStamp
+
+* ; Compile the sprite for fast rendering
+*             lda   #SPRITE_16X16+SPRITE_COMPILED
+*             sta   SpriteFlags
+*             pha                          ; Space for result
+*             pea   SPRITE_16X16           ; Sprite size
+*             pea   PLAYER_VBUFF     ; Source vbuff
+*             _GTECompileSpriteStamp
+*             pla
+*             sta   SpriteAddr             ; Save compiled sprite address
+
+* ; Add sprite to screen
+*             pea   PLAYER_SLOT            ; Sprite slot 0
+*             pei   SpriteFlags            ; Flags (SPRITE_16X16+SPRITE_COMPILED)
+*             pei   SpriteAddr             ; Compiled sprite address
+*             pei   PlayerScreenX                ; X position (80)
+*             pei   PlayerScreenY                ; Y position (100)
+*             _GTEAddSprite
+
+* ; add bottom part of sprite (composite)
+*             pea   PLAYER_SPRITE_BOT_ID       ; Sprite tile ID (SPRITE_16X16+TileIndex)
+*             pea   PLAYER_BOT_VBUFF     ; Virtual buffer address
+*             _GTECreateSpriteStamp
+
+*             lda   #SPRITE_16X8+SPRITE_COMPILED
+*             sta   SpriteFlags
+*             pha
+*             pea   SPRITE_16X8
+*             pea   PLAYER_BOT_VBUFF
+*             _GTECompileSpriteStamp
+*             pla
+*             sta   SpriteAddr
+
+*             lda   PlayerScreenY
+*             clc
+*             adc   #15
+
+*             pea   PLAYER_BOT_SLOT
+*             pei   SpriteFlags
+*             pei   SpriteAddr
+*             pei   PlayerScreenX
+*             pha
+*             _GTEAddSprite
+            jsr   InitPlayerSpriteFrames
             jsr   InitEnemy
             rts
 
@@ -276,6 +456,71 @@ MovePlayer
             pei   PlayerScreenX
             pha
             _GTEMoveSprite
+            rts
+
+UpdatePlayerAnimation
+; Slow animation - only update every 8 frames
+            lda   PlayerAnimTimer
+            inc   a
+            cmp   #8
+            bcc   :no_update
+
+            lda   #0                     ; Reset timer
+            sta   PlayerAnimTimer
+
+            lda   PlayerFrame
+            inc   a
+            cmp   #3                     ; 3 frames per direction
+            bcc   :set_frame
+            lda   #0                     ; Wrap back to frame 0
+:set_frame
+            sta   PlayerFrame
+
+            jsr   UpdatePlayerSprites
+            rts
+
+:no_update
+            sta   PlayerAnimTimer
+            rts
+
+UpdatePlayerSprites
+; Calculate frame index: Direction × 3 + Frame
+            lda   PlayerDirection
+            asl   a                      ; × 2
+            clc
+            adc   PlayerDirection        ; × 2 + × 1 = × 3
+            clc
+            adc   PlayerFrame            ; Add current frame (0-2)
+            asl   a                      ; × 2 (word addresses)
+
+; Check if right-facing (use HFLIP sprites at +18 offset)
+            ldx   PlayerDirection
+            cpx   #DIR_RIGHT
+            bne   :normal_sprites
+            clc
+            adc   #18                    ; Use HFLIP versions
+
+:normal_sprites
+            tax                          ; X = offset into sprite arrays
+
+; Get compiled sprite addresses
+            lda   PlayerTopSprites,x
+            sta   SpriteAddr
+            lda   PlayerBotSprites,x
+            sta   Tmp0
+
+; Update top sprite stamp
+            pea   PLAYER_SLOT
+            pea   $0000                  ; no flags
+            pei   SpriteAddr
+            _GTEUpdateSprite
+
+; Update bottom sprite stamp
+            pea   PLAYER_BOT_SLOT
+            pea   $0000                  ; no flags
+            pei   Tmp0
+            _GTEUpdateSprite
+
             rts
 
 UpdateCamera
@@ -422,12 +667,31 @@ CheckTileCollision
 
 MyDirectPage    ds    2
 MyUserId        ds    2
-Tmp0            ds    2
-Tmp1            ds    2
 TestStr         str   'YS 2 TEST BY YOSHI SUGAWARA'
 NumStr          ds    5
 DebugStr        ds    64
 DebugStr2       ds    64
+
+PlayerTopSprites  ds  18*2        ; 9 frames, 2 bytes per address
+PlayerBotSprites  ds  18*2        ; 9 frames, 2 bytes per address
+
+AnimFrames
+; Down frames
+            dw  1, 65
+            dw  3, 67
+            dw  5, 69
+; Left
+            dw  7, 71
+            dw  9, 73
+            dw  11, 75
+; Right
+            dw  7, 71
+            dw  9, 73
+            dw  11, 75
+; Up
+            dw  13, 77
+            dw  15, 79
+            dw  17, 81
 
             PUT   ../kfest-2022/StartUp.s
             PUT   ../shell/Overlay.s

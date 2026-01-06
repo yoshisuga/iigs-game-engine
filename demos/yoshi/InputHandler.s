@@ -29,6 +29,8 @@ HandleInput
             lda   #0                    ; fall through - clamp to zero, no negative numbers
 :set_left
             sta   PlayerGlobalX
+            lda   #DIR_LEFT
+            sta   PlayerDirection
 :not_left
             pla                         ; Restore key code
             pha                         ; Save key code
@@ -57,6 +59,8 @@ HandleInput
             lda   #959
 :set_right
             sta   PlayerGlobalX
+            lda   #DIR_RIGHT
+            sta   PlayerDirection
 :not_right
             pla
             pha
@@ -83,6 +87,8 @@ HandleInput
             lda   #0
 :set_up
             sta   PlayerGlobalY
+            lda   #DIR_UP
+            sta   PlayerDirection
 :not_up
             pla
             pha
@@ -110,7 +116,9 @@ HandleInput
             bcc   :set_down
             lda   #639
 :set_down
-            sta   PlayerGlobalY                        
+            sta   PlayerGlobalY
+            lda   #DIR_DOWN
+            sta   PlayerDirection
 :not_down
             pla
 
