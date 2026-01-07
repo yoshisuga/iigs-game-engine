@@ -53,6 +53,9 @@ Tmp1    equ 62
 Tmp2    equ 64
 Tmp3 equ 66
 
+WasColliding equ  68    ; Previous frame collision state (0 = no, 1 = yes)
+
+
 ; Constants
 DEADZONE_LEFT equ 54
 DEADZONE_RIGHT equ 90
@@ -190,6 +193,7 @@ Main
 
             jsr   UpdateCamera
             jsr   InitSprites
+            jsr   InitDialog
 
 :eventloop
 
@@ -214,6 +218,9 @@ Main
             _GTERender
 
             jsr   DebugPrinter
+
+            ; Check for dialog (pauses game if dialog is active)
+            jsr   CheckAndShowDialog
 
             brl :eventloop
 
@@ -782,17 +789,33 @@ CheckTileCollision
             bcc   :passable ; 104-106, passable
 
             cmp   #110
-            bcc   :solid    ; 107-108, solid
+            bcc   :solid    ; 107-109, solid
             cmp   #112
-            bcc   :passable ; 109-110, passable
+            bcc   :passable ; 110-111, passable
 
             cmp   #126
-            bcc   :solid    
+            bcc   :solid
             cmp   #128
-            bcc   :passable
+            bcc   :passable ; 126-127, passable
+
+            cmp   #130
+            beq   :passable ; 130, passable
+
+            cmp   #134
+            beq   :passable ; 134, passable
 
             cmp   #135
-            beq   :passable
+            beq   :passable ; 135, passable
+
+            cmp   #161
+            bcc   :solid
+            cmp   #163
+            bcc   :passable ; 161-162, passable
+
+            cmp   #193
+            bcc   :solid
+            cmp   #195
+            bcc   :passable ; 193-194, passable
 
             ; Everything else is solid
             bra   :solid
@@ -832,6 +855,7 @@ AnimFrames
             PUT   ../shell/Overlay.s
             PUT   InputHandler.s
             PUT   Enemy.s
+            PUT   Dialog.s
             PUT   DebugPrinter.s
-            PUT   gen/LanceVillagePCE.TileMap.s
+            PUT   gen/LanceVillagePCE2.TileMap.s
             PUT   font.s

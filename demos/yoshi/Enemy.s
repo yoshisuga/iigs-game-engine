@@ -30,6 +30,7 @@ InitEnemy
 
             stz   EnemyDirection
             stz   EnemyState
+            stz   WasColliding       ; Initialize collision tracking
 
             lda   #ENEMY_SPEED_PATROL
             sta   EnemySpeed
@@ -262,9 +263,29 @@ CheckEnemyCollision
             cmp   #16                   ; Collision threshold (sprites overlap)
             bcs   :no_collision
 
-            lda   #1                    ; Collision detected
+            ; We're colliding now
+            ; Check if we were colliding last frame
+            lda   WasColliding
+            bne   :already_colliding    ; Was already colliding, don't re-trigger
+
+            ; New collision! Trigger dialog
+            lda   DialogState
+            bne   :skip_trigger         ; Dialog already active, skip trigger
+
+            lda   #EnemyCollisionMsg
+            jsr   TriggerDialogSimple
+
+:skip_trigger
+:already_colliding
+            lda   #1
+            sta   WasColliding          ; Remember we're colliding
+            lda   #1                    ; Return collision = true
             rts
 
 :no_collision
+            stz   WasColliding          ; Clear collision state
             lda   #0
             rts
+
+; Dialog message
+EnemyCollisionMsg    str   'WELCOME TO LANCE VILLAGE!'

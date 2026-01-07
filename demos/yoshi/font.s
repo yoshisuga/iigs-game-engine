@@ -67,50 +67,62 @@ NextChar       lda   ]F_CharIdx
                tay                        ;so we'll index with that
 
                lda   FontData,y
+               ora   #$3333              ; Set background to palette 3 (black)
                and   ]F_StrClr
                stal  $E12000,x
 
                lda   FontData+2,y
+               ora   #$3333
                and   ]F_StrClr
                stal  $E12000+2,x
 
                lda   FontData+4,y
+               ora   #$3333
                and   ]F_StrClr
                stal  $E12000+160,x
 
                lda   FontData+6,y
+               ora   #$3333
                and   ]F_StrClr
                stal  $E12000+160+2,x
 
                lda   FontData+8,y
+               ora   #$3333
                and   ]F_StrClr
                stal  {$E12000+160*2},x
 
                lda   FontData+10,y
+               ora   #$3333
                and   ]F_StrClr
                stal  {$E12000+160*2+2},x
 
                lda   FontData+12,y
+               ora   #$3333
                and   ]F_StrClr
                stal  {$E12000+160*3},x
 
                lda   FontData+14,y
+               ora   #$3333
                and   ]F_StrClr
                stal  {$E12000+160*3+2},x
 
                lda   FontData+16,y
+               ora   #$3333
                and   ]F_StrClr
                stal  {$E12000+160*4},x
 
                lda   FontData+18,y
+               ora   #$3333
                and   ]F_StrClr
                stal  {$E12000+160*4+2},x
 
                lda   FontData+20,y
+               ora   #$3333
                and   ]F_StrClr
                stal  {$E12000+160*5},x
 
                lda   FontData+22,y
+               ora   #$3333
                and   ]F_StrClr
                stal  {$E12000+160*5+2},x
                rts
