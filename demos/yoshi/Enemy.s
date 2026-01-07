@@ -272,8 +272,13 @@ CheckEnemyCollision
             lda   DialogState
             bne   :skip_trigger         ; Dialog already active, skip trigger
 
-            lda   #EnemyCollisionMsg
-            jsr   TriggerDialogSimple
+            * lda   #EnemyCollisionMsg
+            * jsr   TriggerDialogSimple
+
+            lda   #EnemyDialogLines
+            ldx   #3              ; 3 lines
+            jsr   TriggerMultiLineDialog
+
 
 :skip_trigger
 :already_colliding
@@ -287,5 +292,16 @@ CheckEnemyCollision
             lda   #0
             rts
 
-; Dialog message
+; Dialog message - single line (current)
 EnemyCollisionMsg    str   'WELCOME TO LANCE VILLAGE!'
+
+; Example multi-line dialog (uncomment to use)
+EnemyDialogLines    dw   Line1, Line2, Line3
+Line1               str  'WELCOME TO'
+Line2               str  'LANCE VILLAGE!'
+Line3               str  'PLEASE ENJOY YOUR STAY'
+
+; To use multi-line instead:
+; lda   #EnemyDialogLines
+; ldx   #3              ; 3 lines
+; jsr   TriggerMultiLineDialog

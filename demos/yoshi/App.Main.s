@@ -54,6 +54,7 @@ Tmp2    equ 64
 Tmp3 equ 66
 
 WasColliding equ  68    ; Previous frame collision state (0 = no, 1 = yes)
+Tmp4    equ 70          ; Temporary pointer for dialog system
 
 
 ; Constants

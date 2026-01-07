@@ -27,6 +27,7 @@ InitDialog
             stz   DialogState
             stz   DialogMessagePtr
             stz   DialogMessagePtr+2
+            stz   DialogLineCount
             rts
 
 ; Check if dialog should be shown and handle it
@@ -193,26 +194,46 @@ DrawDialogText
             lda   DialogMessagePtr
             beq   :no_message         ; Skip if no message set
 
-            ; Calculate screen position for text
-            ; X = Y * 160 + X (for 160 bytes per line)
-            lda   #DIALOG_Y
+            lda   DialogLineCount
+            beq   :no_message         ; No lines to draw
+            sta   Tmp3                ; Tmp3 = line counter
+
+            ; Copy DialogMessagePtr to direct page for indirect indexed addressing
+            lda   DialogMessagePtr
+            sta   Tmp4                ; Tmp4 = pointer to string array
+
+            stz   Tmp2                ; Tmp2 = current line index (0-based)
+
+:draw_line
+            ; Calculate Y position for this line
+            ; Y = DIALOG_Y + 8 + (line_index * 8)
+            lda   Tmp2                ; Current line index
+            asl   a                   ; × 2
+            asl   a                   ; × 4
+            asl   a                   ; × 8 pixels per line
             clc
-            adc   #8                  ; 8 pixels from top of box
+            adc   #DIALOG_Y
+            adc   #8                  ; Y = DIALOG_Y + 8 + (line * 8)
             sta   Tmp0
 
             ; Multiply Y by 160
             lda   Tmp0
-            sta   Tmp1
             asl   a                   ; × 2
             asl   a                   ; × 4
             asl   a                   ; × 8
-            sta   Tmp2
             asl   a                   ; × 16
             asl   a                   ; × 32
+            sta   Tmp1                ; Save × 32
+            lda   Tmp0
+            asl   a                   ; × 2
+            asl   a                   ; × 4
+            asl   a                   ; × 8
+            asl   a                   ; × 16
+            asl   a                   ; × 32
+            asl   a                   ; × 64
+            asl   a                   ; × 128
             clc
-            adc   Tmp2                ; × 32 + × 8 = × 40
-            asl   a                   ; × 80
-            asl   a                   ; × 160
+            adc   Tmp1                ; × 128 + × 32 = × 160
 
             ; Add X offset
             clc
@@ -220,11 +241,21 @@ DrawDialogText
             adc   #8                  ; 8 pixels from left of box
             tax
 
-            ; Load message pointer
-            lda   DialogMessagePtr
-            ldy   #$FFFF              ; White text color (palette 15 repeated)
+            ; Get string pointer for this line
+            ; Assume DialogMessagePtr points to array of word pointers
+            lda   Tmp2
+            asl                       ; × 2 for word offset
+            tay
+            lda   (Tmp4),y            ; Get pointer to this line's string
+            beq   :next_line          ; Skip if null
 
+            ldy   #$FFFF              ; White text color
             jsr   DrawString
+
+:next_line
+            inc   Tmp2                ; Next line
+            dec   Tmp3                ; Decrement counter
+            bne   :draw_line          ; Continue if more lines
 
 :no_message
             rts
@@ -244,6 +275,18 @@ TriggerDialog
 TriggerDialogSimple
             sta   DialogMessagePtr
             stz   DialogMessagePtr+2    ; Assume same bank
+            lda   #1
+            sta   DialogLineCount       ; Single line
+            sta   DialogState
+            rts
+
+; Trigger dialog with multiple lines
+; Input: A = pointer to array of string pointers
+;        X = number of lines (1-4)
+TriggerMultiLineDialog
+            sta   DialogMessagePtr
+            stz   DialogMessagePtr+2
+            stx   DialogLineCount
             lda   #1
             sta   DialogState
             rts
