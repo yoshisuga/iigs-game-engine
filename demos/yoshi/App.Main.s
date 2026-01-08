@@ -203,13 +203,13 @@ Main
             jsr   UpdatePlayerAnimation
             jsr   UpdateEnemy
 
+            ; Check collision with enemy (triggers dialog if colliding)
+            jsr   CheckEnemyCollision
+
 ; Move the sprite
             jsr   MovePlayer
-            
-            pea   ENEMY_SLOT_1
-            pei   EnemyScreenX
-            pei   EnemyScreenY
-            _GTEMoveSprite
+
+            ; Enemy sprite is moved by UpdateEnemy, not here!
 
             pei   ScreenX               ; BG0 X-origin
             pei   ScreenY               ; BG0 Y-origin
@@ -829,7 +829,7 @@ CheckTileCollision
 
 MyDirectPage    ds    2
 MyUserId        ds    2
-TestStr         str   'YS 2 TEST BY YOSHI SUGAWARA'
+TestStr         ds    64        ; Buffer for enemy debug string
 NumStr          ds    5
 DebugStr        ds    64
 DebugStr2       ds    64

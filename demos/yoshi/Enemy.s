@@ -65,47 +65,64 @@ UpdateEnemy
             sbc   ScreenY
             sta   EnemyScreenY
 
-            ; check current state
-            lda   EnemyState
-            beq   :in_patrol
-
-:in_chase   
-            jsr   UpdateChase
-
-; check if should return to patrol if too far
-            jsr   CalculateDistance     ; distance in A
-            cmp   #ESCAPE_RANGE
-            bcc   :stay_chase
-
-; return to patrol
-            stz   EnemyState
-            lda   #ENEMY_SPEED_PATROL
-            sta   EnemySpeed
-            bra   :move_sprite
-:stay_chase
-            bra   :move_sprite
-:in_patrol
+            ; PATROL ONLY - Chase disabled
             jsr   UpdatePatrol
 
-; check if should change to chase
-            jsr   CalculateDistance
-            cmp   #DETECTION_RANGE
-            bcs   :stay_patrol
-
-; Chase Mode
-            lda   #STATE_CHASE
-            sta   EnemyState
-            lda   #ENEMY_SPEED_CHASE
-            sta   EnemySpeed
-
-:stay_patrol
+            ; Chase/detection disabled for testing
+            * ; check current state
+            * lda   EnemyState
+            * beq   :in_patrol
+            *
+            * :in_chase
+            * jsr   UpdateChase
+            *
+            * ; check if should return to patrol if too far
+            * jsr   CalculateDistance     ; distance in A
+            * cmp   #ESCAPE_RANGE
+            * bcc   :stay_chase
+            *
+            * ; return to patrol
+            * stz   EnemyState
+            * lda   #ENEMY_SPEED_PATROL
+            * sta   EnemySpeed
+            * bra   :move_sprite
+            * :stay_chase
+            * bra   :move_sprite
+            * :in_patrol
+            *
+            * ; check if should change to chase
+            * jsr   CalculateDistance
+            * cmp   #DETECTION_RANGE
+            * bcs   :stay_patrol
+            *
+            * ; Chase Mode
+            * lda   #STATE_CHASE
+            * sta   EnemyState
+            * lda   #ENEMY_SPEED_CHASE
+            * sta   EnemySpeed
+            *
+            * :stay_patrol
 
 :move_sprite
-            ; update position
+            ; Validate screen coordinates before moving sprite
+            ; If enemy is off screen, don't call _GTEMoveSprite
+            lda   EnemyScreenX
+            bmi   :skip_move        ; Negative X (off left)
+            cmp   #320
+            bcs   :skip_move        ; >= 320 (off right)
+
+            lda   EnemyScreenY
+            bmi   :skip_move        ; Negative Y (off top)
+            cmp   #200
+            bcs   :skip_move        ; >= 200 (off bottom)
+
+            ; On screen - safe to move
             pea   ENEMY_SLOT_1
             pei   EnemyScreenX
             pei   EnemyScreenY
             _GTEMoveSprite
+
+:skip_move
             rts
 
 UpdatePatrol
@@ -268,15 +285,23 @@ CheckEnemyCollision
             lda   WasColliding
             bne   :already_colliding    ; Was already colliding, don't re-trigger
 
-            ; New collision! Trigger dialog
+            ; New collision! Trigger multiple dialogs in sequence
             lda   DialogState
             bne   :skip_trigger         ; Dialog already active, skip trigger
 
-            * lda   #EnemyCollisionMsg
-            * jsr   TriggerDialogSimple
+            ; First dialog - greeting
+            lda   #Dialog1Lines
+            ldx   #2              ; 2 lines
+            jsr   TriggerMultiLineDialog
 
-            lda   #EnemyDialogLines
+            ; Second dialog - introduction
+            lda   #Dialog2Lines
             ldx   #3              ; 3 lines
+            jsr   TriggerMultiLineDialog
+
+            ; Third dialog - farewell
+            lda   #Dialog3Lines
+            ldx   #2              ; 2 lines
             jsr   TriggerMultiLineDialog
 
 
@@ -292,16 +317,20 @@ CheckEnemyCollision
             lda   #0
             rts
 
-; Dialog message - single line (current)
-EnemyCollisionMsg    str   'WELCOME TO LANCE VILLAGE!'
+; Multiple dialogs that chain together when player collides with enemy
 
-; Example multi-line dialog (uncomment to use)
-EnemyDialogLines    dw   Line1, Line2, Line3
-Line1               str  'WELCOME TO'
-Line2               str  'LANCE VILLAGE!'
-Line3               str  'PLEASE ENJOY YOUR STAY'
+; Dialog 1 - Greeting (2 lines)
+Dialog1Lines        dw   D1_Line1, D1_Line2
+D1_Line1            str  'WELCOME TO'
+D1_Line2            str  'LANCE VILLAGE!'
 
-; To use multi-line instead:
-; lda   #EnemyDialogLines
-; ldx   #3              ; 3 lines
-; jsr   TriggerMultiLineDialog
+; Dialog 2 - Introduction (3 lines)
+Dialog2Lines        dw   D2_Line1, D2_Line2, D2_Line3
+D2_Line1            str  'I AM THE VILLAGE'
+D2_Line2            str  'GUARDIAN. I WATCH OVER'
+D2_Line3            str  'THIS PEACEFUL PLACE.'
+
+; Dialog 3 - Farewell (2 lines)
+Dialog3Lines        dw   D3_Line1, D3_Line2
+D3_Line1            str  'ENJOY YOUR STAY'
+D3_Line2            str  'AND BE SAFE!'

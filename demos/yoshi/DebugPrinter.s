@@ -365,9 +365,125 @@ BuildDebugStr
             rep   #$20             ; Back to 16-bit A
             rts
 
+BuildEnemyDebugStr
+; Build enemy debug string: "EGX:### EGY:### ESX:### ESY:### DIR:#"
+            sep   #$20             ; Switch to 8-bit A
+            lda   #'E'
+            sta   TestStr+1
+            lda   #'G'
+            sta   TestStr+2
+            lda   #'X'
+            sta   TestStr+3
+            lda   #':'
+            sta   TestStr+4
+            rep   #$20             ; Back to 16-bit A
+
+            lda   EnemyGlobalX
+            jsr   Num2Str4
+
+            sep   #$20             ; Switch to 8-bit A
+            lda   NumStr+2         ; Skip thousands digit
+            sta   TestStr+5
+            lda   NumStr+3
+            sta   TestStr+6
+            lda   NumStr+4
+            sta   TestStr+7
+
+            lda   #' '
+            sta   TestStr+8
+            lda   #'E'
+            sta   TestStr+9
+            lda   #'G'
+            sta   TestStr+10
+            lda   #'Y'
+            sta   TestStr+11
+            lda   #':'
+            sta   TestStr+12
+            rep   #$20             ; Back to 16-bit A
+
+            lda   EnemyGlobalY
+            jsr   Num2Str4
+
+            sep   #$20             ; Switch to 8-bit A
+            lda   NumStr+2         ; Skip thousands digit
+            sta   TestStr+13
+            lda   NumStr+3
+            sta   TestStr+14
+            lda   NumStr+4
+            sta   TestStr+15
+
+            lda   #' '
+            sta   TestStr+16
+            lda   #'E'
+            sta   TestStr+17
+            lda   #'S'
+            sta   TestStr+18
+            lda   #'X'
+            sta   TestStr+19
+            lda   #':'
+            sta   TestStr+20
+            rep   #$20             ; Back to 16-bit A
+
+            lda   EnemyScreenX
+            jsr   Num2Str4
+
+            sep   #$20             ; Switch to 8-bit A
+            lda   NumStr+2         ; Skip thousands digit
+            sta   TestStr+21
+            lda   NumStr+3
+            sta   TestStr+22
+            lda   NumStr+4
+            sta   TestStr+23
+
+            lda   #' '
+            sta   TestStr+24
+            lda   #'E'
+            sta   TestStr+25
+            lda   #'S'
+            sta   TestStr+26
+            lda   #'Y'
+            sta   TestStr+27
+            lda   #':'
+            sta   TestStr+28
+            rep   #$20             ; Back to 16-bit A
+
+            lda   EnemyScreenY
+            jsr   Num2Str4
+
+            sep   #$20             ; Switch to 8-bit A
+            lda   NumStr+2         ; Skip thousands digit
+            sta   TestStr+29
+            lda   NumStr+3
+            sta   TestStr+30
+            lda   NumStr+4
+            sta   TestStr+31
+
+            lda   #' '
+            sta   TestStr+32
+            lda   #'D'
+            sta   TestStr+33
+            lda   #'I'
+            sta   TestStr+34
+            lda   #'R'
+            sta   TestStr+35
+            lda   #':'
+            sta   TestStr+36
+
+            lda   EnemyDirection
+            clc
+            adc   #'0'
+            sta   TestStr+37
+
+            lda   #37              ; String length (reduced from 41)
+            sta   TestStr
+
+            rep   #$20             ; Back to 16-bit A
+            rts
+
 
 DebugPrinter
             jsr   BuildDebugStr
+            jsr   BuildEnemyDebugStr
 
             lda   #DebugStr         ; No bank byte needed
             ldx   #160*190
