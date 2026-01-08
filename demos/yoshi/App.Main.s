@@ -37,24 +37,25 @@ EnemyScreenY equ  34
 EnemyState  equ 36      ; 0=patrol, 1=chase
 EnemySpeed  equ 38      ; movement speed (1=patrol, 3 for chase)
 EnemyPatrolMin equ  40
-EnemyPatrolMax equ  42     
-EnemyDirection equ  44    ;0=moving left, 1=right
-EnemyFlags     equ  46
-SpriteTmpAddr equ   48
-EnemyFrameCount equ 50
-AdolTmpAddr equ 52
+EnemyPatrolMax equ  42
+EnemyPatrolY   equ  44    ; Y position for patrol mode
+EnemyDirection equ  46    ;0=moving left, 1=right
+EnemyFlags     equ  48
+SpriteTmpAddr equ   50
+EnemyFrameCount equ 52
+AdolTmpAddr equ 54
 
-PlayerDirection equ 54
-PlayerFrame equ 56
-PlayerAnimTimer equ 58
+PlayerDirection equ 56
+PlayerFrame equ 58
+PlayerAnimTimer equ 60
 
-Tmp0    equ 60
-Tmp1    equ 62
-Tmp2    equ 64
-Tmp3 equ 66
+Tmp0    equ 62
+Tmp1    equ 64
+Tmp2    equ 66
+Tmp3    equ 68
+Tmp4    equ 70
 
-WasColliding equ  68    ; Previous frame collision state (0 = no, 1 = yes)
-Tmp4    equ 70          ; Temporary pointer for dialog system
+WasColliding equ  72    ; Previous frame collision state (0 = no, 1 = yes)
 
 
 ; Constants
@@ -105,8 +106,8 @@ STATE_CHASE equ   1
 ; AI Behavior
 ENEMY_SPEED_PATROL equ  1
 ENEMY_SPEED_CHASE equ 1
-DETECTION_RANGE equ 36
-ESCAPE_RANGE equ 36
+DETECTION_RANGE equ 36      ; Start chasing when player within 36 pixels
+ESCAPE_RANGE equ 60         ; Stop chasing when player > 60 pixels away (prevents oscillation)
 
 
 ; Keycodes
