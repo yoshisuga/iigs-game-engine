@@ -54,8 +54,9 @@ Tmp1    equ 64
 Tmp2    equ 66
 Tmp3    equ 68
 Tmp4    equ 70
+Tmp5    equ 72
 
-WasColliding equ  72    ; Previous frame collision state (0 = no, 1 = yes)
+WasColliding equ  74    ; Previous frame collision state (0 = no, 1 = yes)
 
 
 ; Constants

@@ -375,7 +375,7 @@ EnqueueDialog
 
             ; Store message pointer (low word only, high word = 0)
             pla                       ; Get line count (discard for now)
-            sta   Tmp0                ; Temp save line count
+            sta   Tmp5                ; Temp save line count - use Tmp5 (safe, not used by Camera/Enemy)
             pla                       ; Get message pointer
             sta   DialogQueueMsgPtr,x
             stz   DialogQueueMsgPtr+2,x  ; High word = 0 (same bank)
@@ -386,7 +386,7 @@ EnqueueDialog
             tax
 
             ; Store line count
-            lda   Tmp0
+            lda   Tmp5
             sta   DialogQueueLineCount,x
 
             ; Increment tail (with wraparound)

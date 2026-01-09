@@ -3,10 +3,11 @@
 ; ========================================
 ;
 ; TEMP VARIABLE USAGE:
-; Tmp0, Tmp1 - Used by UpdateCamera, Dialog - DO NOT USE
+; Tmp0, Tmp1 - Used by UpdateCamera - DO NOT USE in enemy code
 ; Tmp2       - Used by CalculateDistance - Safe for other Enemy functions
 ; Tmp3, Tmp4 - Used by UpdateChase - Safe for other Enemy functions
-; Tmp5+      - Generally safe to use
+; Tmp5       - Used by Dialog (EnqueueDialog) - DO NOT USE in enemy code
+; Tmp6+      - Generally safe to use
 ;
 ; ========================================
 
@@ -65,7 +66,11 @@ InitEnemy
             rts
 
 UpdateEnemy
-; update position from scroll
+; Updates enemy AI and sprite position
+; IMPORTANT: Offscreen enemies are frozen - no AI updates, no position changes
+; This prevents crashes, improves performance, and avoids jarring warps
+;
+; update screen position from scroll
             lda   EnemyGlobalX
             sec
             sbc   ScreenX
@@ -83,18 +88,7 @@ UpdateEnemy
             ; In chase mode - pursue player
             jsr   UpdateChase
 
-            ; SAFETY: Only check distance if enemy is on screen
-            ; Offscreen enemies in chase should just keep chasing
-            lda   EnemyScreenX
-            bmi   :stay_chase           ; Offscreen, stay in chase
-            cmp   #320
-            bcs   :stay_chase           ; Offscreen, stay in chase
-            lda   EnemyScreenY
-            bmi   :stay_chase           ; Offscreen, stay in chase
-            cmp   #200
-            bcs   :stay_chase           ; Offscreen, stay in chase
-
-            ; On screen - check if should return to patrol (player escaped)
+            ; Check if should return to patrol (player escaped)
             jsr   CalculateDistance     ; distance in A
             cmp   #ESCAPE_RANGE
             bcc   :stay_chase
@@ -103,10 +97,6 @@ UpdateEnemy
             stz   EnemyState
             lda   #ENEMY_SPEED_PATROL
             sta   EnemySpeed
-
-            ; Reset Y position to patrol level
-            lda   EnemyPatrolY
-            sta   EnemyGlobalY
             bra   :move_sprite
 
 :stay_chase
@@ -116,18 +106,7 @@ UpdateEnemy
             ; In patrol mode - walk back and forth
             jsr   UpdatePatrol
 
-            ; SAFETY: Only check for chase if enemy is on screen
-            ; Offscreen enemies should just patrol
-            lda   EnemyScreenX
-            bmi   :stay_patrol          ; Offscreen, stay in patrol
-            cmp   #320
-            bcs   :stay_patrol          ; Offscreen, stay in patrol
-            lda   EnemyScreenY
-            bmi   :stay_patrol          ; Offscreen, stay in patrol
-            cmp   #200
-            bcs   :stay_patrol          ; Offscreen, stay in patrol
-
-            ; On screen - check if should change to chase (player detected)
+            ; Check if should change to chase (player detected)
             jsr   CalculateDistance
             cmp   #DETECTION_RANGE
             bcs   :stay_patrol
@@ -145,14 +124,15 @@ UpdateEnemy
             ; If enemy is off screen, don't call _GTEMoveSprite
             lda   EnemyScreenX
             bmi   :skip_move        ; Negative X (off left)
-            cmp   #320
+            cmp   #160
             bcs   :skip_move        ; >= 320 (off right)
 
             lda   EnemyScreenY
             bmi   :skip_move        ; Negative Y (off top)
-            cmp   #200
+            cmp   #116
             bcs   :skip_move        ; >= 200 (off bottom)
 
+            ; Moving the sprite while its offscreen seems to be problematic
             ; On screen - safe to move
             pea   ENEMY_SLOT_1
             pei   EnemyScreenX
@@ -211,7 +191,7 @@ UpdateChase
             lda   EnemyFrameCount
             inc
             sta   EnemyFrameCount
-            and   #$0003
+            and   #$0001
             beq   :do_chase
             rts
 
