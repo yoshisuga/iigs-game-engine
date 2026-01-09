@@ -338,10 +338,12 @@ BuildDebugStr
             lda   #':'
             sta   DebugStr2+28
 
+            ; Check collision state for NPC 0
             rep   #$20
-            jsr   CheckEnemyCollision
+            ldx   #0*2              ; NPC index 0
+            lda   NPCWasColliding,x
             clc
-            adc   #'0'                  ; Convert 0/1 to '0'/'1'
+            adc   #'0'              ; Convert 0/1 to '0'/'1'
             sep   #$20
             sta   DebugStr2+29
 
@@ -352,21 +354,23 @@ BuildDebugStr
             lda   #'I'
             sta   DebugStr2+32
             lda   #'R'
-            lda   #':'
             sta   DebugStr2+33
+            lda   #':'
+            sta   DebugStr2+34
             lda   PlayerDirection
             clc
             adc   #'0'
-            sta   DebugStr2+34
+            sta   DebugStr2+35
 
-            lda   #34
+            lda   #35
             sta   DebugStr2             ; Update length
 
             rep   #$20             ; Back to 16-bit A
             rts
 
 BuildEnemyDebugStr
-; Build enemy debug string: "EGX:### EGY:### ESX:### ESY:### DIR:#"
+; Build NPC 0 (enemy) debug string: "EGX:### EGY:### ESX:### ESY:### DIR:#"
+            ldx   #0*2             ; NPC index 0 (enemy)
             sep   #$20             ; Switch to 8-bit A
             lda   #'E'
             sta   TestStr+1
@@ -378,7 +382,7 @@ BuildEnemyDebugStr
             sta   TestStr+4
             rep   #$20             ; Back to 16-bit A
 
-            lda   EnemyGlobalX
+            lda   NPCGlobalX,x
             jsr   Num2Str4
 
             sep   #$20             ; Switch to 8-bit A
@@ -401,7 +405,7 @@ BuildEnemyDebugStr
             sta   TestStr+12
             rep   #$20             ; Back to 16-bit A
 
-            lda   EnemyGlobalY
+            lda   NPCGlobalY,x
             jsr   Num2Str4
 
             sep   #$20             ; Switch to 8-bit A
@@ -424,9 +428,10 @@ BuildEnemyDebugStr
             sta   TestStr+20
             rep   #$20             ; Back to 16-bit A
 
-            lda   EnemyScreenX
+            lda   NPCScreenX,x
             jsr   Num2Str4
 
+            ldx   #0*2             ; Restore X (Num2Str4 may clobber it)
             sep   #$20             ; Switch to 8-bit A
             lda   NumStr+2         ; Skip thousands digit
             sta   TestStr+21
@@ -447,9 +452,10 @@ BuildEnemyDebugStr
             sta   TestStr+28
             rep   #$20             ; Back to 16-bit A
 
-            lda   EnemyScreenY
+            lda   NPCScreenY,x
             jsr   Num2Str4
 
+            ldx   #0*2             ; Restore X
             sep   #$20             ; Switch to 8-bit A
             lda   NumStr+2         ; Skip thousands digit
             sta   TestStr+29
@@ -469,12 +475,12 @@ BuildEnemyDebugStr
             lda   #':'
             sta   TestStr+36
 
-            lda   EnemyDirection
+            lda   NPCDirection,x
             clc
             adc   #'0'
             sta   TestStr+37
 
-            lda   #37              ; String length (reduced from 41)
+            lda   #37              ; String length
             sta   TestStr
 
             rep   #$20             ; Back to 16-bit A

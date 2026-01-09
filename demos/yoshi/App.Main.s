@@ -33,22 +33,6 @@ PlayerY       equ 12
 SpriteFlags   equ 16
 SpriteAddr    equ 18
 
-; Enemy data (still using DP for performance)
-EnemyGlobalX    equ  20
-EnemyGlobalY    equ  22
-EnemyScreenX    equ  24
-EnemyScreenY    equ  26
-EnemyState      equ  28      ; 0=patrol, 1=chase
-EnemySpeed      equ  30      ; movement speed (1=patrol, 3 for chase)
-EnemyPatrolMin  equ  32
-EnemyPatrolMax  equ  34
-EnemyPatrolY    equ  36      ; Y position for patrol mode
-EnemyDirection  equ  38      ; 0=moving left, 1=right
-EnemyFlags      equ  40
-SpriteTmpAddr   equ  42
-EnemyFrameCount equ  44
-AdolTmpAddr     equ  46
-
 ; Temporary variables (shared across systems)
 Tmp0    equ 48
 Tmp1    equ 50
@@ -57,7 +41,7 @@ Tmp3    equ 54
 Tmp4    equ 56
 Tmp5    equ 58
 
-WasColliding equ  60    ; Previous frame collision state (0 = no, 1 = yes)
+; NPC system variables are defined in NPC.s at DP locations 72-78
 
 
 ; Constants
@@ -95,22 +79,6 @@ LEFT_BOT_VBUFF_2   equ VBUFF_SPRITE_START+20*VBUFF_SPRITE_STEP
 UP_BOT_VBUFF_0     equ VBUFF_SPRITE_START+21*VBUFF_SPRITE_STEP
 UP_BOT_VBUFF_1     equ VBUFF_SPRITE_START+22*VBUFF_SPRITE_STEP
 UP_BOT_VBUFF_2     equ VBUFF_SPRITE_START+23*VBUFF_SPRITE_STEP
-
-; Enemy
-ENEMY_SLOT_1 equ  2
-ENEMY_SPRITE_ID equ {SPRITE_16X16+145}
-ENEMY_VBUFF equ VBUFF_SPRITE_START+3*VBUFF_SPRITE_STEP
-
-; AI enum
-STATE_PATROL equ  0
-STATE_CHASE equ   1
-
-; AI Behavior
-ENEMY_SPEED_PATROL equ  1
-ENEMY_SPEED_CHASE equ 1
-DETECTION_RANGE equ 36      ; Start chasing when player within 36 pixels
-ESCAPE_RANGE equ 60         ; Stop chasing when player > 60 pixels away (prevents oscillation)
-
 
 ; Keycodes
 LEFT_ARROW    equ   $08
@@ -189,8 +157,8 @@ Main
             jsr   InitPlayer
             jsr   UpdateCamera
 
-            ; Initialize enemy
-            jsr   InitEnemy
+            ; Initialize NPCs (including enemy)
+            jsr   InitNPCs
             jsr   InitDialog
 
 :eventloop
@@ -198,15 +166,15 @@ Main
             jsr   HandleInput
             jsr   UpdateCamera
             jsr   UpdatePlayerAnimation
-            jsr   UpdateEnemy
+            jsr   UpdateAllNPCs
 
-            ; Check collision with enemy (triggers dialog if colliding)
-            jsr   CheckEnemyCollision
+            ; Check collision with NPCs (triggers dialog if colliding)
+            jsr   CheckAllNPCCollisions
 
 ; Move the sprite
             jsr   MovePlayer
 
-            ; Enemy sprite is moved by UpdateEnemy, not here!
+            ; NPC sprites are moved by UpdateAllNPCs, not here!
 
             pei   ScreenX               ; BG0 X-origin
             pei   ScreenY               ; BG0 Y-origin
@@ -332,7 +300,7 @@ AnimFrames
             PUT   ../shell/Overlay.s
             PUT   InputHandler.s
             PUT   Player.s
-            PUT   Enemy.s
+            PUT   NPC.s
             PUT   Dialog.s
             PUT   DebugPrinter.s
             PUT   gen/LanceVillagePCE2.TileMap.s
