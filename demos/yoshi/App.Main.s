@@ -15,48 +15,49 @@ LanceVillageTiles  EXT                 ; tileset buffer
 LanceVillagePalette EXT              ; palette from tileset
 
 ; Direct page variables
-ScreenX       equ 0
-ScreenY       equ 2
-ScreenWidth   equ 4
-ScreenHeight  equ 6
-frameCount    equ 8
+; ========================================
+; DIRECT PAGE VARIABLES
+; ========================================
+; These are performance-critical variables that need fast DP access
+; Player data is now in Player.s data structure for better organization
+
+ScreenX       equ 0      ; Current scroll X position
+ScreenY       equ 2      ; Current scroll Y position
+ScreenWidth   equ 4      ; Screen width
+ScreenHeight  equ 6      ; Screen height
+frameCount    equ 8      ; Global frame counter
+
+; Legacy sprite vars (may be removable)
 PlayerX       equ 10
 PlayerY       equ 12
-PlayerSpeed equ 14
-SpriteFlags equ 16
-SpriteAddr  equ 18
-PlayerGlobalX equ 20
-PlayerGlobalY equ 22
-PlayerScreenX equ 24
-PlayerScreenY equ 26
+SpriteFlags   equ 16
+SpriteAddr    equ 18
 
-EnemyGlobalX equ  28
-EnemyGlobalY equ  30
-EnemyScreenX equ  32
-EnemyScreenY equ  34
-EnemyState  equ 36      ; 0=patrol, 1=chase
-EnemySpeed  equ 38      ; movement speed (1=patrol, 3 for chase)
-EnemyPatrolMin equ  40
-EnemyPatrolMax equ  42
-EnemyPatrolY   equ  44    ; Y position for patrol mode
-EnemyDirection equ  46    ;0=moving left, 1=right
-EnemyFlags     equ  48
-SpriteTmpAddr equ   50
-EnemyFrameCount equ 52
-AdolTmpAddr equ 54
+; Enemy data (still using DP for performance)
+EnemyGlobalX    equ  20
+EnemyGlobalY    equ  22
+EnemyScreenX    equ  24
+EnemyScreenY    equ  26
+EnemyState      equ  28      ; 0=patrol, 1=chase
+EnemySpeed      equ  30      ; movement speed (1=patrol, 3 for chase)
+EnemyPatrolMin  equ  32
+EnemyPatrolMax  equ  34
+EnemyPatrolY    equ  36      ; Y position for patrol mode
+EnemyDirection  equ  38      ; 0=moving left, 1=right
+EnemyFlags      equ  40
+SpriteTmpAddr   equ  42
+EnemyFrameCount equ  44
+AdolTmpAddr     equ  46
 
-PlayerDirection equ 56
-PlayerFrame equ 58
-PlayerAnimTimer equ 60
+; Temporary variables (shared across systems)
+Tmp0    equ 48
+Tmp1    equ 50
+Tmp2    equ 52
+Tmp3    equ 54
+Tmp4    equ 56
+Tmp5    equ 58
 
-Tmp0    equ 62
-Tmp1    equ 64
-Tmp2    equ 66
-Tmp3    equ 68
-Tmp4    equ 70
-Tmp5    equ 72
-
-WasColliding equ  74    ; Previous frame collision state (0 = no, 1 = yes)
+WasColliding equ  60    ; Previous frame collision state (0 = no, 1 = yes)
 
 
 ; Constants
@@ -181,21 +182,15 @@ Main
 ; Set up the tilemap on BG0
             jsr   BG0SetUp
 
-; Init player position
-            lda   #2
-            sta   PlayerSpeed
-
-; start player at world position
-            lda   #32
-            sta   PlayerGlobalX
-            lda   #60
-            sta   PlayerGlobalY
-
             stz   ScreenX
             stz   ScreenY
 
+            ; Initialize player system (position, sprites, animation)
+            jsr   InitPlayer
             jsr   UpdateCamera
-            jsr   InitSprites
+
+            ; Initialize enemy
+            jsr   InitEnemy
             jsr   InitDialog
 
 :eventloop
@@ -252,527 +247,6 @@ SetLimits
                 sbc   #16
                 sta   ScreenHeight
                 rts
-
-InitPlayerSpriteFrames
-; Create and compile sprite stamps for 9 animation frames
-; Each frame gets its own VBUFF to avoid overwriting
-
-; Down Frame 0 - Top
-            pea   SPRITE_16X16+1
-            pea   DOWN_TOP_VBUFF_0
-            _GTECreateSpriteStamp
-            pha                          ; Space for result
-            pea   SPRITE_16X16
-            pea   DOWN_TOP_VBUFF_0
-            _GTECompileSpriteStamp
-            pla
-            sta   DownTopCompiled+0
-; Down Frame 0 - Bottom
-            pea   SPRITE_16X8+65
-            pea   DOWN_BOT_VBUFF_0
-            _GTECreateSpriteStamp
-            pha
-            pea   SPRITE_16X8
-            pea   DOWN_BOT_VBUFF_0
-            _GTECompileSpriteStamp
-            pla
-            sta   DownBotCompiled+0
-
-; Down Frame 1 - Top
-            pea   SPRITE_16X16+3
-            pea   DOWN_TOP_VBUFF_1
-            _GTECreateSpriteStamp
-            pha
-            pea   SPRITE_16X16
-            pea   DOWN_TOP_VBUFF_1
-            _GTECompileSpriteStamp
-            pla
-            sta   DownTopCompiled+2
-; Down Frame 1 - Bottom
-            pea   SPRITE_16X8+67
-            pea   DOWN_BOT_VBUFF_1
-            _GTECreateSpriteStamp
-            pha
-            pea   SPRITE_16X8
-            pea   DOWN_BOT_VBUFF_1
-            _GTECompileSpriteStamp
-            pla
-            sta   DownBotCompiled+2
-
-; Down Frame 2 - Top
-            pea   SPRITE_16X16+5
-            pea   DOWN_TOP_VBUFF_2
-            _GTECreateSpriteStamp
-            pha
-            pea   SPRITE_16X16
-            pea   DOWN_TOP_VBUFF_2
-            _GTECompileSpriteStamp
-            pla
-            sta   DownTopCompiled+4
-; Down Frame 2 - Bottom
-            pea   SPRITE_16X8+69
-            pea   DOWN_BOT_VBUFF_2
-            _GTECreateSpriteStamp
-            pha
-            pea   SPRITE_16X8
-            pea   DOWN_BOT_VBUFF_2
-            _GTECompileSpriteStamp
-            pla
-            sta   DownBotCompiled+4
-
-; Left Frame 0 - Top
-            pea   SPRITE_16X16+7
-            pea   LEFT_TOP_VBUFF_0
-            _GTECreateSpriteStamp
-            pha
-            pea   SPRITE_16X16
-            pea   LEFT_TOP_VBUFF_0
-            _GTECompileSpriteStamp
-            pla
-            sta   LeftTopCompiled+0
-; Left Frame 0 - Bottom
-            pea   SPRITE_16X8+71
-            pea   LEFT_BOT_VBUFF_0
-            _GTECreateSpriteStamp
-            pha
-            pea   SPRITE_16X8
-            pea   LEFT_BOT_VBUFF_0
-            _GTECompileSpriteStamp
-            pla
-            sta   LeftBotCompiled+0
-
-; Left Frame 1 - Top
-            pea   SPRITE_16X16+9
-            pea   LEFT_TOP_VBUFF_1
-            _GTECreateSpriteStamp
-            pha
-            pea   SPRITE_16X16
-            pea   LEFT_TOP_VBUFF_1
-            _GTECompileSpriteStamp
-            pla
-            sta   LeftTopCompiled+2
-; Left Frame 1 - Bottom
-            pea   SPRITE_16X8+73
-            pea   LEFT_BOT_VBUFF_1
-            _GTECreateSpriteStamp
-            pha
-            pea   SPRITE_16X8
-            pea   LEFT_BOT_VBUFF_1
-            _GTECompileSpriteStamp
-            pla
-            sta   LeftBotCompiled+2
-
-; Left Frame 2 - Top
-            pea   SPRITE_16X16+11
-            pea   LEFT_TOP_VBUFF_2
-            _GTECreateSpriteStamp
-            pha
-            pea   SPRITE_16X16
-            pea   LEFT_TOP_VBUFF_2
-            _GTECompileSpriteStamp
-            pla
-            sta   LeftTopCompiled+4
-; Left Frame 2 - Bottom
-            pea   SPRITE_16X8+75
-            pea   LEFT_BOT_VBUFF_2
-            _GTECreateSpriteStamp
-            pha
-            pea   SPRITE_16X8
-            pea   LEFT_BOT_VBUFF_2
-            _GTECompileSpriteStamp
-            pla
-            sta   LeftBotCompiled+4
-
-; Up Frame 0 - Top
-            pea   SPRITE_16X16+13
-            pea   UP_TOP_VBUFF_0
-            _GTECreateSpriteStamp
-            pha
-            pea   SPRITE_16X16
-            pea   UP_TOP_VBUFF_0
-            _GTECompileSpriteStamp
-            pla
-            sta   UpTopCompiled+0
-; Up Frame 0 - Bottom
-            pea   SPRITE_16X8+77
-            pea   UP_BOT_VBUFF_0
-            _GTECreateSpriteStamp
-            pha
-            pea   SPRITE_16X8
-            pea   UP_BOT_VBUFF_0
-            _GTECompileSpriteStamp
-            pla
-            sta   UpBotCompiled+0
-
-; Up Frame 1 - Top
-            pea   SPRITE_16X16+15
-            pea   UP_TOP_VBUFF_1
-            _GTECreateSpriteStamp
-            pha
-            pea   SPRITE_16X16
-            pea   UP_TOP_VBUFF_1
-            _GTECompileSpriteStamp
-            pla
-            sta   UpTopCompiled+2
-; Up Frame 1 - Bottom
-            pea   SPRITE_16X8+79
-            pea   UP_BOT_VBUFF_1
-            _GTECreateSpriteStamp
-            pha
-            pea   SPRITE_16X8
-            pea   UP_BOT_VBUFF_1
-            _GTECompileSpriteStamp
-            pla
-            sta   UpBotCompiled+2
-
-; Up Frame 2 - Top
-            pea   SPRITE_16X16+17
-            pea   UP_TOP_VBUFF_2
-            _GTECreateSpriteStamp
-            pha
-            pea   SPRITE_16X16
-            pea   UP_TOP_VBUFF_2
-            _GTECompileSpriteStamp
-            pla
-            sta   UpTopCompiled+4
-; Up Frame 2 - Bottom
-            pea   SPRITE_16X8+81
-            pea   UP_BOT_VBUFF_2
-            _GTECreateSpriteStamp
-            pha
-            pea   SPRITE_16X8
-            pea   UP_BOT_VBUFF_2
-            _GTECompileSpriteStamp
-            pla
-            sta   UpBotCompiled+4
-
-; Add initial sprite (Down Frame 0) with compiled stamps
-            pea   PLAYER_SLOT
-            lda   #SPRITE_16X16+SPRITE_COMPILED
-            pha
-            lda   DownTopCompiled+0
-            pha
-            pei   PlayerScreenX
-            pei   PlayerScreenY
-            _GTEAddSprite
-
-            pea   PLAYER_BOT_SLOT
-            lda   #SPRITE_16X8+SPRITE_COMPILED
-            pha
-            lda   DownBotCompiled+0
-            pha
-            pei   PlayerScreenX
-            lda   PlayerScreenY
-            clc
-            adc   #15
-            pha
-            _GTEAddSprite
-            rts
-
-InitSprites
-* ; Create sprite stamp from tile data
-*             pea   PLAYER_SPRITE_ID       ; Sprite tile ID (SPRITE_16X16+TileIndex)
-*             pea   PLAYER_VBUFF     ; Virtual buffer address
-*             _GTECreateSpriteStamp
-
-* ; Compile the sprite for fast rendering
-*             lda   #SPRITE_16X16+SPRITE_COMPILED
-*             sta   SpriteFlags
-*             pha                          ; Space for result
-*             pea   SPRITE_16X16           ; Sprite size
-*             pea   PLAYER_VBUFF     ; Source vbuff
-*             _GTECompileSpriteStamp
-*             pla
-*             sta   SpriteAddr             ; Save compiled sprite address
-
-* ; Add sprite to screen
-*             pea   PLAYER_SLOT            ; Sprite slot 0
-*             pei   SpriteFlags            ; Flags (SPRITE_16X16+SPRITE_COMPILED)
-*             pei   SpriteAddr             ; Compiled sprite address
-*             pei   PlayerScreenX                ; X position (80)
-*             pei   PlayerScreenY                ; Y position (100)
-*             _GTEAddSprite
-
-* ; add bottom part of sprite (composite)
-*             pea   PLAYER_SPRITE_BOT_ID       ; Sprite tile ID (SPRITE_16X16+TileIndex)
-*             pea   PLAYER_BOT_VBUFF     ; Virtual buffer address
-*             _GTECreateSpriteStamp
-
-*             lda   #SPRITE_16X8+SPRITE_COMPILED
-*             sta   SpriteFlags
-*             pha
-*             pea   SPRITE_16X8
-*             pea   PLAYER_BOT_VBUFF
-*             _GTECompileSpriteStamp
-*             pla
-*             sta   SpriteAddr
-
-*             lda   PlayerScreenY
-*             clc
-*             adc   #15
-
-*             pea   PLAYER_BOT_SLOT
-*             pei   SpriteFlags
-*             pei   SpriteAddr
-*             pei   PlayerScreenX
-*             pha
-*             _GTEAddSprite
-            jsr   InitPlayerSpriteFrames
-            jsr   InitEnemy
-            rts
-
-MovePlayer
-            pea   PLAYER_SLOT
-            pei   PlayerScreenX
-            pei   PlayerScreenY
-            _GTEMoveSprite
-
-            lda   PlayerScreenY
-            clc
-            adc   #15
-
-            pea   PLAYER_BOT_SLOT
-            pei   PlayerScreenX
-            pha
-            _GTEMoveSprite
-            rts
-
-UpdatePlayerAnimation
-; Slow animation - only update every 8 frames
-            lda   PlayerAnimTimer
-            inc   a
-            cmp   #2
-            bcc   :no_update
-
-            lda   #0                     ; Reset timer
-            sta   PlayerAnimTimer
-
-            lda   PlayerFrame
-            inc   a
-            cmp   #3                     ; 3 frames per direction
-            bcc   :set_frame
-            lda   #0                     ; Wrap back to frame 0
-:set_frame
-            sta   PlayerFrame
-
-            jsr   UpdatePlayerSprites
-            rts
-
-:no_update
-            sta   PlayerAnimTimer
-            rts
-
-UpdatePlayerSprites
-; Use jump table based on direction
-            lda   PlayerDirection
-            asl                          ; × 2 for word offset
-            tax
-            jmp   (DirectionHandlers,x)
-
-DirectionHandlers
-            dw   HandleDown
-            dw   HandleRight
-            dw   HandleLeft
-            dw   HandleUp
-
-HandleDown
-            lda   PlayerFrame
-            asl                          ; × 2 for word offset
-            tax
-            pea   PLAYER_SLOT
-            lda   #SPRITE_16X16+SPRITE_COMPILED
-            pha
-            lda   DownTopCompiled,x
-            pha
-            _GTEUpdateSprite
-
-            lda   PlayerFrame
-            asl
-            tax
-            pea   PLAYER_BOT_SLOT
-            lda   #SPRITE_16X8+SPRITE_COMPILED
-            pha
-            lda   DownBotCompiled,x
-            pha
-            _GTEUpdateSprite
-            rts
-
-HandleLeft
-            lda   PlayerFrame
-            asl
-            tax
-            pea   PLAYER_SLOT
-            lda   #SPRITE_16X16+SPRITE_COMPILED
-            pha
-            lda   LeftTopCompiled,x
-            pha
-            _GTEUpdateSprite
-
-            lda   PlayerFrame
-            asl
-            tax
-            pea   PLAYER_BOT_SLOT
-            lda   #SPRITE_16X8+SPRITE_COMPILED
-            pha
-            lda   LeftBotCompiled,x
-            pha
-            _GTEUpdateSprite
-            rts
-
-HandleRight
-            lda   PlayerFrame
-            asl
-            tax
-            pea   PLAYER_SLOT
-            lda   #SPRITE_16X16+SPRITE_COMPILED+SPRITE_HFLIP
-            pha
-            lda   LeftTopCompiled,x      ; Reuse left frames
-            pha
-            _GTEUpdateSprite
-
-            lda   PlayerFrame
-            asl
-            tax
-            pea   PLAYER_BOT_SLOT
-            lda   #SPRITE_16X8+SPRITE_COMPILED+SPRITE_HFLIP
-            pha
-            lda   LeftBotCompiled,x
-            pha
-            _GTEUpdateSprite
-            rts
-
-HandleUp
-            lda   PlayerFrame
-            asl
-            tax
-            pea   PLAYER_SLOT
-            lda   #SPRITE_16X16+SPRITE_COMPILED
-            pha
-            lda   UpTopCompiled,x
-            pha
-            _GTEUpdateSprite
-
-            lda   PlayerFrame
-            asl
-            tax
-            pea   PLAYER_BOT_SLOT
-            lda   #SPRITE_16X8+SPRITE_COMPILED
-            pha
-            lda   UpBotCompiled,x
-            pha
-            _GTEUpdateSprite
-            rts
-
-; Compiled sprite address arrays (filled by InitPlayerSpriteFrames)
-DownTopCompiled    ds   6      ; 3 frames × 2 bytes
-DownBotCompiled    ds   6
-LeftTopCompiled    ds   6
-LeftBotCompiled    ds   6
-UpTopCompiled      ds   6
-UpBotCompiled      ds   6
-
-UpdateCamera
-; Calc screen position
-            lda   PlayerGlobalX
-            sec
-            sbc   ScreenX
-            sta   PlayerScreenX
-
-            lda   PlayerGlobalY
-            sec
-            sbc   ScreenY
-            sta   PlayerScreenY
-
-; Check X axis: Right edge
-            lda   PlayerScreenX
-            cmp   #DEADZONE_RIGHT
-            bcc   :check_left
-
-; X Axis: past deadzone right edge - scroll
-            sec
-            sbc   #DEADZONE_RIGHT
-            clc
-            adc   ScreenX
-            cmp   #MAX_SCROLL_X+1
-            bcc   :set_scroll_x
-            lda   #MAX_SCROLL_X
-:set_scroll_x
-            sta   ScreenX
-            lda   PlayerGlobalX
-            sec
-            sbc   ScreenX
-            sta   PlayerScreenX       ; re-calc player screen after setting scroll pos
-            bra   :check_y
-
-; Check X axis: left edge
-:check_left
-            lda   PlayerScreenX
-            cmp   #DEADZONE_LEFT
-            bcs   :check_y
-
-; X Axis: past left edge - scroll
-            lda   #DEADZONE_LEFT
-            sec
-            sbc   PlayerScreenX
-            sta   Tmp0
-            lda   ScreenX
-            sec
-            sbc   Tmp0
-            bpl   :set_scroll_x2
-            lda   #0
-:set_scroll_x2
-            sta   ScreenX
-            lda   PlayerGlobalX
-            sec
-            sbc   ScreenX
-            sta   PlayerScreenX
-
-; Y Axis - bottom
-:check_y                                    
-            lda   PlayerScreenY
-            cmp   #DEADZONE_BOT
-            bcc   :check_top
-
-; Past bottom edge, scroll down            
-            sec
-            sbc   #DEADZONE_BOT
-            clc
-            adc   ScreenY
-            cmp   #MAX_SCROLL_Y+1
-            bcc   :set_scroll_y
-            lda   #MAX_SCROLL_Y
-:set_scroll_y
-            sta   ScreenY
-            lda   PlayerGlobalY
-            sec
-            sbc   ScreenY
-            sta   PlayerScreenY
-            bra   :done
-
-:check_top                        
-            lda   PlayerScreenY
-            cmp   #DEADZONE_TOP
-            bcs   :done
-
-; Past top edge, scroll up
-            lda   #DEADZONE_TOP
-            sec
-            sbc   PlayerScreenY
-            sta   Tmp0
-            lda   ScreenY
-            sec
-            sbc   Tmp0
-            bpl   :set_scroll_y2
-            lda   #0
-:set_scroll_y2
-            sta   ScreenY
-            lda   PlayerGlobalY
-            sec
-            sbc   ScreenY
-            sta   PlayerScreenY
-
-:done
-            rts
 
 CheckTileCollision
             pha       ; Space for result
@@ -857,6 +331,7 @@ AnimFrames
             PUT   ../kfest-2022/StartUp.s
             PUT   ../shell/Overlay.s
             PUT   InputHandler.s
+            PUT   Player.s
             PUT   Enemy.s
             PUT   Dialog.s
             PUT   DebugPrinter.s
