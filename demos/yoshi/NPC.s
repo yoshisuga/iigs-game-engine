@@ -575,21 +575,11 @@ UpdateNPCAnimation
             lda   NPCActive,x
             beq   :next
 
-            ; Only update animation if NPC is onscreen (SAFETY CHECK)
-            lda   NPCScreenX,x
-            bmi   :next             ; Negative X (offscreen left)
-            cmp   #160
-            bcs   :next             ; >= 160 (offscreen right)
-            lda   NPCScreenY,x
-            bmi   :next             ; Negative Y (offscreen top)
-            cmp   #116
-            bcs   :next             ; >= 116 (offscreen bottom)
-
             ; Update animation timer (advance every 4 frames for slower animation)
             lda   NPCAnimTimer,x
             inc   a
             cmp   #4                ; Slower than Player (2 frames only)
-            bcc   :no_update
+            bcc   :no_frame_change
 
             ; Reset timer and toggle frame (0 ↔ 1)
             lda   #0
@@ -597,13 +587,14 @@ UpdateNPCAnimation
             lda   NPCFrame,x
             eor   #1                ; Toggle between 0 and 1
             sta   NPCFrame,x
+            bra   :update_sprites
 
-            ; Update sprite graphics
-            jsr   UpdateNPCSprites
-            bra   :next
-
-:no_update
+:no_frame_change
             sta   NPCAnimTimer,x
+
+:update_sprites
+            ; Always update sprite graphics (handles direction AND frame changes)
+            jsr   UpdateNPCSprites
 
 :next
             lda   CurrentNPCIndex
@@ -625,28 +616,32 @@ UpdateNPCSprites
             cpx   #0
             bne   :skip_update
 
-            ; Get direction and jump to handler (use direct jump table)
+            ; Get direction and jump to handler (use short branches)
             lda   NPCDirection,x
-            asl                     ; × 2 for word offset
-            tax
-            jmp   (NPCDirectionHandlers,x)
+            beq   :go_down
+            cmp   #1
+            beq   :go_right
+            cmp   #2
+            beq   :go_left
+            cmp   #3
+            beq   :go_up
+            rts                     ; Invalid direction, exit
+
+:go_down    jmp   NPCHandleDown
+:go_left    jmp   NPCHandleLeft
+:go_right   jmp   NPCHandleRight
+:go_up      jmp   NPCHandleUp
 
 :skip_update
             rts
-
-NPCDirectionHandlers
-            dw   NPCHandleDown    ; 0 - DIR_DOWN
-            dw   NPCHandleLeft    ; 1 - DIR_LEFT
-            dw   NPCHandleRight   ; 2 - DIR_RIGHT
-            dw   NPCHandleUp      ; 3 - DIR_UP
 
 ; Direction: Down
 NPCHandleDown
             ldx   CurrentNPCIndex
             lda   NPCFrame,x        ; 0 or 1
-            beq   :frame0
+            beq   :dframe0
 
-:frame1
+:dframe1
             ; Update to frame 1
             pea   2                 ; NPC 0 top slot
             lda   #SPRITE_16X16+SPRITE_COMPILED
@@ -663,7 +658,7 @@ NPCHandleDown
             _GTEUpdateSprite
             rts
 
-:frame0
+:dframe0
             ; Update to frame 0
             pea   2                 ; NPC 0 top slot
             lda   #SPRITE_16X16+SPRITE_COMPILED
@@ -684,9 +679,9 @@ NPCHandleDown
 NPCHandleRight
             ldx   CurrentNPCIndex
             lda   NPCFrame,x
-            beq   :frame0
+            beq   :rframe0
 
-:frame1
+:rframe1
             pea   2
             lda   #SPRITE_16X16+SPRITE_COMPILED+SPRITE_HFLIP
             pha
@@ -702,7 +697,7 @@ NPCHandleRight
             _GTEUpdateSprite
             rts
 
-:frame0
+:rframe0
             pea   2
             lda   #SPRITE_16X16+SPRITE_COMPILED+SPRITE_HFLIP
             pha
@@ -722,9 +717,9 @@ NPCHandleRight
 NPCHandleLeft
             ldx   CurrentNPCIndex
             lda   NPCFrame,x
-            beq   :frame0
+            beq   :lframe0
 
-:frame1
+:lframe1
             pea   2
             lda   #SPRITE_16X16+SPRITE_COMPILED
             pha
@@ -740,7 +735,7 @@ NPCHandleLeft
             _GTEUpdateSprite
             rts
 
-:frame0
+:lframe0
             pea   2
             lda   #SPRITE_16X16+SPRITE_COMPILED
             pha
@@ -760,9 +755,9 @@ NPCHandleLeft
 NPCHandleUp
             ldx   CurrentNPCIndex
             lda   NPCFrame,x
-            beq   :frame0
+            beq   :uframe0
 
-:frame1
+:uframe1
             pea   2
             lda   #SPRITE_16X16+SPRITE_COMPILED
             pha
@@ -778,7 +773,7 @@ NPCHandleUp
             _GTEUpdateSprite
             rts
 
-:frame0
+:uframe0
             pea   2
             lda   #SPRITE_16X16+SPRITE_COMPILED
             pha
@@ -810,12 +805,6 @@ UpdateAllNPCs
             jmp   :next             ; Not active, skip to next NPC
 
 :active
-            ; Store old position for direction detection (NEW)
-            lda   NPCGlobalX,x
-            sta   NPCTmp0
-            lda   NPCGlobalY,x
-            sta   NPCTmp1
-
             ; Update screen position from scroll
             lda   NPCGlobalX,x
             sec
@@ -877,33 +866,7 @@ UpdateAllNPCs
             bra   :no_ai
 
 :no_ai
-            ; Determine animation direction from movement (NEW)
-            lda   NPCGlobalX,x
-            sec
-            sbc   NPCTmp0
-            beq   :check_y_movement
-            bmi   :moved_left
-            lda   #DIR_RIGHT
-            sta   NPCDirection,x
-            bra   :direction_set
-:moved_left
-            lda   #DIR_LEFT
-            sta   NPCDirection,x
-            bra   :direction_set
-:check_y_movement
-            lda   NPCGlobalY,x
-            sec
-            sbc   NPCTmp1
-            beq   :direction_set    ; No movement, keep current direction
-            bmi   :moved_up
-            lda   #DIR_DOWN
-            sta   NPCDirection,x
-            bra   :direction_set
-:moved_up
-            lda   #DIR_UP
-            sta   NPCDirection,x
-:direction_set
-
+            ; NPCDirection is set by AI functions (patrol/chase)
             ; Validate screen coordinates before moving sprite
             ; Skip _GTEMoveSprite if offscreen (prevents crash)
             lda   NPCScreenX,x
@@ -983,10 +946,14 @@ UpdateNPCPatrol
             sta   NPCGlobalX,x
             lda   #1
             sta   NPCPatrolDir,x
+            lda   #DIR_RIGHT        ; Set animation direction
+            sta   NPCDirection,x
             rts
 
 :set_left_pos
             sta   NPCGlobalX,x
+            lda   #DIR_LEFT         ; Set animation direction
+            sta   NPCDirection,x
             rts
 
 :moving_right
@@ -1001,10 +968,14 @@ UpdateNPCPatrol
             lda   NPCPatrolMax,x
             sta   NPCGlobalX,x
             stz   NPCPatrolDir,x
+            lda   #DIR_LEFT         ; Set animation direction
+            sta   NPCDirection,x
             rts
 
 :set_right_pos
             sta   NPCGlobalX,x
+            lda   #DIR_RIGHT        ; Set animation direction
+            sta   NPCDirection,x
             rts
 
 UpdateNPCChase
@@ -1056,19 +1027,24 @@ UpdateNPCChase
             clc
             adc   NPCSpeed,x
             cmp   #640              ; World boundary
-            bcc   :set_y
+            bcc   :set_y_down
             lda   #639
-:set_y
+:set_y_down
             sta   NPCGlobalY,x
+            lda   #DIR_DOWN         ; Set animation direction
+            sta   NPCDirection,x
             bra   :done
 
 :chase_up
             lda   NPCGlobalY,x
             sec
             sbc   NPCSpeed,x
-            bpl   :set_y
+            bpl   :set_y_up
             lda   #0
+:set_y_up
             sta   NPCGlobalY,x
+            lda   #DIR_UP           ; Set animation direction
+            sta   NPCDirection,x
             bra   :done
 
 :move_x
@@ -1084,19 +1060,24 @@ UpdateNPCChase
             clc
             adc   NPCSpeed,x
             cmp   #960              ; World boundary
-            bcc   :set_x
+            bcc   :set_x_right
             lda   #959
-:set_x
+:set_x_right
             sta   NPCGlobalX,x
+            lda   #DIR_RIGHT        ; Set animation direction
+            sta   NPCDirection,x
             bra   :done
 
 :chase_left
             lda   NPCGlobalX,x
             sec
             sbc   NPCSpeed,x
-            bpl   :set_x
+            bpl   :set_x_left
             lda   #0
+:set_x_left
             sta   NPCGlobalX,x
+            lda   #DIR_LEFT         ; Set animation direction
+            sta   NPCDirection,x
 
 :done
             rts

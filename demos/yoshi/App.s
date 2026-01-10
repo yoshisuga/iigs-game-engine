@@ -8,5 +8,5 @@
 
 ; Segment #2: Tileset
 
-            ASM   gen/LanceVillagePCE.TileSet.s
+            ASM   gen/LanceVillagePCE2.TileSet.s
             SNA   TSET

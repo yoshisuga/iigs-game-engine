@@ -349,20 +349,73 @@ BuildDebugStr
 
             lda   #' '
             sta   DebugStr2+30
-            lda   #'D'
+            lda   #'P'
             sta   DebugStr2+31
-            lda   #'I'
+            lda   #'D'
             sta   DebugStr2+32
-            lda   #'R'
-            sta   DebugStr2+33
             lda   #':'
-            sta   DebugStr2+34
+            sta   DebugStr2+33
             lda   PlayerDirection
             clc
             adc   #'0'
-            sta   DebugStr2+35
+            sta   DebugStr2+34
 
-            lda   #35
+            lda   #' '
+            sta   DebugStr2+35
+            lda   #'N'
+            sta   DebugStr2+36
+            lda   #'D'
+            sta   DebugStr2+37
+            lda   #':'
+            sta   DebugStr2+38
+            ldx   #0*2              ; NPC 0
+            lda   NPCDirection,x
+            clc
+            adc   #'0'
+            sta   DebugStr2+39
+
+            lda   #' '
+            sta   DebugStr2+40
+            lda   #'N'
+            sta   DebugStr2+41
+            lda   #'F'
+            sta   DebugStr2+42
+            lda   #':'
+            sta   DebugStr2+43
+            lda   NPCFrame,x
+            clc
+            adc   #'0'
+            sta   DebugStr2+44
+
+            lda   #' '
+            sta   DebugStr2+45
+            lda   #'P'
+            sta   DebugStr2+46
+            lda   #'D'
+            sta   DebugStr2+47
+            lda   #'R'
+            sta   DebugStr2+48
+            lda   #':'
+            sta   DebugStr2+49
+            lda   NPCPatrolDir,x
+            clc
+            adc   #'0'
+            sta   DebugStr2+50
+
+            lda   #' '
+            sta   DebugStr2+51
+            lda   #'S'
+            sta   DebugStr2+52
+            lda   #'T'
+            sta   DebugStr2+53
+            lda   #':'
+            sta   DebugStr2+54
+            lda   NPCState,x
+            clc
+            adc   #'0'
+            sta   DebugStr2+55
+
+            lda   #55
             sta   DebugStr2             ; Update length
 
             rep   #$20             ; Back to 16-bit A
