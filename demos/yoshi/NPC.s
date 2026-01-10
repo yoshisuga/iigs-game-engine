@@ -151,6 +151,9 @@ InitNPCs
             ; Spawn the enemy (now as NPC 0)
             jsr   SpawnEnemy
 
+            ; Spawn NPC 1
+            jsr   SpawnNPC1
+
             rts
 
 ; ========================================
@@ -345,6 +348,194 @@ InitNPC0Sprites
 
             rts
 
+InitNPC1Sprites
+; Initialize all sprite frames for NPC 1
+; Input: A = base tile ID (e.g., 333 for second NPC)
+; Tile layout: Down 0,2 Left 4,6 Up 8,10 (top); +64 for bottom
+; Compiles 12 frames total (2 per direction × 3 directions × 2 sprites)
+            sta   NPCTmp0           ; Save base tile ID
+            ldx   #1*2              ; NPC index 1
+
+; Down Frame 0 - Top
+            lda   NPCTmp0           ; Base tile (e.g., 333)
+            ora   #SPRITE_16X16
+            pha
+            pea   NPC1_DOWN_TOP_VBUFF_0
+            _GTECreateSpriteStamp
+            pha
+            pea   SPRITE_16X16
+            pea   NPC1_DOWN_TOP_VBUFF_0
+            _GTECompileSpriteStamp
+            pla
+            sta   NPCDownTopCompiled0,x
+
+; Down Frame 0 - Bottom
+            lda   NPCTmp0
+            clc
+            adc   #64
+            ora   #SPRITE_16X8
+            pha
+            pea   NPC1_DOWN_BOT_VBUFF_0
+            _GTECreateSpriteStamp
+            pha
+            pea   SPRITE_16X8
+            pea   NPC1_DOWN_BOT_VBUFF_0
+            _GTECompileSpriteStamp
+            pla
+            sta   NPCDownBotCompiled0,x
+
+; Down Frame 1 - Top
+            lda   NPCTmp0
+            clc
+            adc   #2
+            ora   #SPRITE_16X16
+            pha
+            pea   NPC1_DOWN_TOP_VBUFF_1
+            _GTECreateSpriteStamp
+            pha
+            pea   SPRITE_16X16
+            pea   NPC1_DOWN_TOP_VBUFF_1
+            _GTECompileSpriteStamp
+            pla
+            sta   NPCDownTopCompiled1,x
+
+; Down Frame 1 - Bottom
+            lda   NPCTmp0
+            clc
+            adc   #66
+            ora   #SPRITE_16X8
+            pha
+            pea   NPC1_DOWN_BOT_VBUFF_1
+            _GTECreateSpriteStamp
+            pha
+            pea   SPRITE_16X8
+            pea   NPC1_DOWN_BOT_VBUFF_1
+            _GTECompileSpriteStamp
+            pla
+            sta   NPCDownBotCompiled1,x
+
+; Left Frame 0 - Top
+            lda   NPCTmp0
+            clc
+            adc   #4
+            ora   #SPRITE_16X16
+            pha
+            pea   NPC1_LEFT_TOP_VBUFF_0
+            _GTECreateSpriteStamp
+            pha
+            pea   SPRITE_16X16
+            pea   NPC1_LEFT_TOP_VBUFF_0
+            _GTECompileSpriteStamp
+            pla
+            sta   NPCLeftTopCompiled0,x
+
+; Left Frame 0 - Bottom
+            lda   NPCTmp0
+            clc
+            adc   #68
+            ora   #SPRITE_16X8
+            pha
+            pea   NPC1_LEFT_BOT_VBUFF_0
+            _GTECreateSpriteStamp
+            pha
+            pea   SPRITE_16X8
+            pea   NPC1_LEFT_BOT_VBUFF_0
+            _GTECompileSpriteStamp
+            pla
+            sta   NPCLeftBotCompiled0,x
+
+; Left Frame 1 - Top
+            lda   NPCTmp0
+            clc
+            adc   #6
+            ora   #SPRITE_16X16
+            pha
+            pea   NPC1_LEFT_TOP_VBUFF_1
+            _GTECreateSpriteStamp
+            pha
+            pea   SPRITE_16X16
+            pea   NPC1_LEFT_TOP_VBUFF_1
+            _GTECompileSpriteStamp
+            pla
+            sta   NPCLeftTopCompiled1,x
+
+; Left Frame 1 - Bottom
+            lda   NPCTmp0
+            clc
+            adc   #70
+            ora   #SPRITE_16X8
+            pha
+            pea   NPC1_LEFT_BOT_VBUFF_1
+            _GTECreateSpriteStamp
+            pha
+            pea   SPRITE_16X8
+            pea   NPC1_LEFT_BOT_VBUFF_1
+            _GTECompileSpriteStamp
+            pla
+            sta   NPCLeftBotCompiled1,x
+
+; Up Frame 0 - Top
+            lda   NPCTmp0
+            clc
+            adc   #8
+            ora   #SPRITE_16X16
+            pha
+            pea   NPC1_UP_TOP_VBUFF_0
+            _GTECreateSpriteStamp
+            pha
+            pea   SPRITE_16X16
+            pea   NPC1_UP_TOP_VBUFF_0
+            _GTECompileSpriteStamp
+            pla
+            sta   NPCUpTopCompiled0,x
+
+; Up Frame 0 - Bottom
+            lda   NPCTmp0
+            clc
+            adc   #72
+            ora   #SPRITE_16X8
+            pha
+            pea   NPC1_UP_BOT_VBUFF_0
+            _GTECreateSpriteStamp
+            pha
+            pea   SPRITE_16X8
+            pea   NPC1_UP_BOT_VBUFF_0
+            _GTECompileSpriteStamp
+            pla
+            sta   NPCUpBotCompiled0,x
+
+; Up Frame 1 - Top
+            lda   NPCTmp0
+            clc
+            adc   #10
+            ora   #SPRITE_16X16
+            pha
+            pea   NPC1_UP_TOP_VBUFF_1
+            _GTECreateSpriteStamp
+            pha
+            pea   SPRITE_16X16
+            pea   NPC1_UP_TOP_VBUFF_1
+            _GTECompileSpriteStamp
+            pla
+            sta   NPCUpTopCompiled1,x
+
+; Up Frame 1 - Bottom
+            lda   NPCTmp0
+            clc
+            adc   #74
+            ora   #SPRITE_16X8
+            pha
+            pea   NPC1_UP_BOT_VBUFF_1
+            _GTECreateSpriteStamp
+            pha
+            pea   SPRITE_16X8
+            pea   NPC1_UP_BOT_VBUFF_1
+            _GTECompileSpriteStamp
+            pla
+            sta   NPCUpBotCompiled1,x
+
+            rts
+
 ; ========================================
 ; SPAWN NPCs
 ; ========================================
@@ -358,9 +549,9 @@ SpawnEnemy
             sta   NPCActive,x
 
             ; Set world position (matches old InitEnemy)
-            lda   #150
+            lda   #80
             sta   NPCGlobalX,x
-            lda   #200
+            lda   #60
             sta   NPCGlobalY,x
 
             ; Initialize animation state (NEW)
@@ -443,86 +634,66 @@ SpawnEnemy
 
 ; Spawn NPC 1 - Hostile enemy (patrol)
 SpawnNPC1
-; Example hostile NPC with patrol AI
+; Spawn NPC 1 - Patrol AI with animation
             ldx   #1*2              ; NPC index 1
 
+            ; Mark active
             lda   #1
             sta   NPCActive,x
 
-            ; Position
-            lda   #600
+            ; Set world position
+            lda   #80
             sta   NPCGlobalX,x
-            lda   #300
+            lda   #80
             sta   NPCGlobalY,x
 
-            ; Sprites
-            lda   #{SPRITE_16X16+145}
-            sta   NPCTopSpriteID,x
-            lda   #{SPRITE_16X8+65}
-            sta   NPCBotSpriteID,x
+            ; Initialize animation state
+            lda   #DIR_DOWN
+            sta   NPCDirection,x
+            stz   NPCFrame,x
+            stz   NPCAnimTimer,x
 
-            ; VBUFFs (NPC 1 uses VBUFF slots 12-13)
-            lda   #VBUFF_SPRITE_START+12*VBUFF_SPRITE_STEP
-            sta   NPCTopVBuff,x
-            lda   #VBUFF_SPRITE_START+13*VBUFF_SPRITE_STEP
-            sta   NPCBotVBuff,x
+            ; Set type and behavior
+            lda   #NPC_HOSTILE      ; Hostile enemy
+            sta   NPCBehavior,x
+            stz   NPCCharacterID,x  ; No dialog
 
-            ; Flags
+            ; Combat stats
+            lda   #10
+            sta   NPCHealth,x
+            sta   NPCMaxHealth,x
+            lda   #3                ; 3 damage per hit
+            sta   NPCDamage,x
+
+            ; Set AI: Patrol
+            lda   #AI_PATROL
+            sta   NPCAIType,x
+            lda   #1                ; Patrol speed
+            sta   NPCSpeed,x
+            lda   #500              ; Patrol min X
+            sta   NPCPatrolMin,x
+            lda   #700              ; Patrol max X
+            sta   NPCPatrolMax,x
+            stz   NPCPatrolDir,x    ; Start moving left
+            stz   NPCState,x        ; Start in patrol mode
+
+            ; Initialize sprites for NPC 1 (compiles all 12 frames)
+            lda   #333              ; Base tile ID
+            jsr   InitNPC1Sprites
+
+            ; Set sprite flags for 16x24 sprite
             lda   #SPRITE_16X16+SPRITE_COMPILED
             sta   NPCTopFlags,x
             lda   #SPRITE_16X8+SPRITE_COMPILED
             sta   NPCBotFlags,x
 
-            ; Type: Hostile enemy
-            lda   #NPC_HOSTILE
-            sta   NPCBehavior,x
-
-            ; Combat stats
-            lda   #10               ; 10 HP
-            sta   NPCHealth,x
-            sta   NPCMaxHealth,x
-            lda   #1                ; 1 damage per hit
-            sta   NPCDamage,x
-
-            ; AI: Patrol
-            lda   #AI_PATROL
-            sta   NPCAIType,x
-            lda   #1                ; Speed
-            sta   NPCSpeed,x
-            lda   #500              ; Patrol min
-            sta   NPCPatrolMin,x
-            lda   #700              ; Patrol max
-            sta   NPCPatrolMax,x
-            stz   NPCPatrolDir,x    ; Start moving left
-
-            ; Create sprites (same as NPC0 but with different VBUFFs/slots)
-            pea   {SPRITE_16X16+145}
-            lda   NPCTopVBuff,x
-            pha
-            _GTECreateSpriteStamp
-
-            pha
-            pea   SPRITE_16X16
-            lda   NPCTopVBuff,x
-            pha
-            _GTECompileSpriteStamp
-            pla
+            ; Set initial sprite addresses from compiled arrays (Down frame 0)
+            lda   NPCDownTopCompiled0,x
             sta   NPCTopAddr,x
-
-            pea   {SPRITE_16X8+65}
-            lda   NPCBotVBuff,x
-            pha
-            _GTECreateSpriteStamp
-
-            pha
-            pea   SPRITE_16X8
-            lda   NPCBotVBuff,x
-            pha
-            _GTECompileSpriteStamp
-            pla
+            lda   NPCDownBotCompiled0,x
             sta   NPCBotAddr,x
 
-            ; Screen position
+            ; Calculate screen position
             lda   NPCGlobalX,x
             sec
             sbc   ScreenX
@@ -532,8 +703,8 @@ SpawnNPC1
             sbc   ScreenY
             sta   NPCScreenY,x
 
-            ; Add sprites (NPC 1 uses slots 4,5)
-            pea   4
+            ; Add top sprite (NPC 1 uses slot 4)
+            pea   4                 ; Slot 4
             lda   NPCTopFlags,x
             pha
             lda   NPCTopAddr,x
@@ -544,7 +715,8 @@ SpawnNPC1
             pha
             _GTEAddSprite
 
-            pea   5
+            ; Add bottom sprite (NPC 1 uses slot 5)
+            pea   5                 ; Slot 5
             lda   NPCBotFlags,x
             pha
             lda   NPCBotAddr,x
@@ -553,7 +725,7 @@ SpawnNPC1
             pha
             lda   NPCScreenY,x
             clc
-            adc   #16
+            adc   #15               ; Y offset for bottom sprite
             pha
             _GTEAddSprite
 
@@ -610,11 +782,11 @@ UpdateNPCAnimation
 UpdateNPCSprites
 ; Updates sprite graphics based on current direction and frame
 ; X = CurrentNPCIndex on entry (NPC being processed)
-; NOTE: Currently only supports NPC 0
+; Supports NPC 0 and NPC 1
 
-            ; Only handle NPC 0 for now
-            cpx   #0
-            bne   :skip_update
+            ; Only handle NPC 0 and 1 (indices 0 and 2)
+            cpx   #4
+            bcs   :skip_update
 
             ; Get direction and jump to handler (use short branches)
             lda   NPCDirection,x
@@ -642,17 +814,25 @@ NPCHandleDown
             beq   :dframe0
 
 :dframe1
-            ; Update to frame 1
-            pea   2                 ; NPC 0 top slot
+            ; Update to frame 1 - calculate sprite slot dynamically
+            lda   CurrentNPCIndex
+            clc
+            adc   #NPC_SLOT_BASE
+            pha                     ; Top sprite slot
             lda   #SPRITE_16X16+SPRITE_COMPILED
             pha
+            ldx   CurrentNPCIndex
             lda   NPCDownTopCompiled1,x
             pha
             _GTEUpdateSprite
 
-            pea   3                 ; NPC 0 bottom slot
+            lda   CurrentNPCIndex
+            clc
+            adc   #NPC_SLOT_BASE+1
+            pha                     ; Bottom sprite slot
             lda   #SPRITE_16X8+SPRITE_COMPILED
             pha
+            ldx   CurrentNPCIndex
             lda   NPCDownBotCompiled1,x
             pha
             _GTEUpdateSprite
@@ -660,16 +840,24 @@ NPCHandleDown
 
 :dframe0
             ; Update to frame 0
-            pea   2                 ; NPC 0 top slot
+            lda   CurrentNPCIndex
+            clc
+            adc   #NPC_SLOT_BASE
+            pha
             lda   #SPRITE_16X16+SPRITE_COMPILED
             pha
+            ldx   CurrentNPCIndex
             lda   NPCDownTopCompiled0,x
             pha
             _GTEUpdateSprite
 
-            pea   3                 ; NPC 0 bottom slot
+            lda   CurrentNPCIndex
+            clc
+            adc   #NPC_SLOT_BASE+1
+            pha
             lda   #SPRITE_16X8+SPRITE_COMPILED
             pha
+            ldx   CurrentNPCIndex
             lda   NPCDownBotCompiled0,x
             pha
             _GTEUpdateSprite
@@ -682,32 +870,48 @@ NPCHandleRight
             beq   :rframe0
 
 :rframe1
-            pea   2
+            lda   CurrentNPCIndex
+            clc
+            adc   #NPC_SLOT_BASE
+            pha
             lda   #SPRITE_16X16+SPRITE_COMPILED+SPRITE_HFLIP
             pha
+            ldx   CurrentNPCIndex
             lda   NPCLeftTopCompiled1,x
             pha
             _GTEUpdateSprite
 
-            pea   3
+            lda   CurrentNPCIndex
+            clc
+            adc   #NPC_SLOT_BASE+1
+            pha
             lda   #SPRITE_16X8+SPRITE_COMPILED+SPRITE_HFLIP
             pha
+            ldx   CurrentNPCIndex
             lda   NPCLeftBotCompiled1,x
             pha
             _GTEUpdateSprite
             rts
 
 :rframe0
-            pea   2
+            lda   CurrentNPCIndex
+            clc
+            adc   #NPC_SLOT_BASE
+            pha
             lda   #SPRITE_16X16+SPRITE_COMPILED+SPRITE_HFLIP
             pha
+            ldx   CurrentNPCIndex
             lda   NPCLeftTopCompiled0,x
             pha
             _GTEUpdateSprite
 
-            pea   3
+            lda   CurrentNPCIndex
+            clc
+            adc   #NPC_SLOT_BASE+1
+            pha
             lda   #SPRITE_16X8+SPRITE_COMPILED+SPRITE_HFLIP
             pha
+            ldx   CurrentNPCIndex
             lda   NPCLeftBotCompiled0,x
             pha
             _GTEUpdateSprite
@@ -720,32 +924,48 @@ NPCHandleLeft
             beq   :lframe0
 
 :lframe1
-            pea   2
+            lda   CurrentNPCIndex
+            clc
+            adc   #NPC_SLOT_BASE
+            pha
             lda   #SPRITE_16X16+SPRITE_COMPILED
             pha
+            ldx   CurrentNPCIndex
             lda   NPCLeftTopCompiled1,x
             pha
             _GTEUpdateSprite
 
-            pea   3
+            lda   CurrentNPCIndex
+            clc
+            adc   #NPC_SLOT_BASE+1
+            pha
             lda   #SPRITE_16X8+SPRITE_COMPILED
             pha
+            ldx   CurrentNPCIndex
             lda   NPCLeftBotCompiled1,x
             pha
             _GTEUpdateSprite
             rts
 
 :lframe0
-            pea   2
+            lda   CurrentNPCIndex
+            clc
+            adc   #NPC_SLOT_BASE
+            pha
             lda   #SPRITE_16X16+SPRITE_COMPILED
             pha
+            ldx   CurrentNPCIndex
             lda   NPCLeftTopCompiled0,x
             pha
             _GTEUpdateSprite
 
-            pea   3
+            lda   CurrentNPCIndex
+            clc
+            adc   #NPC_SLOT_BASE+1
+            pha
             lda   #SPRITE_16X8+SPRITE_COMPILED
             pha
+            ldx   CurrentNPCIndex
             lda   NPCLeftBotCompiled0,x
             pha
             _GTEUpdateSprite
@@ -758,32 +978,48 @@ NPCHandleUp
             beq   :uframe0
 
 :uframe1
-            pea   2
+            lda   CurrentNPCIndex
+            clc
+            adc   #NPC_SLOT_BASE
+            pha
             lda   #SPRITE_16X16+SPRITE_COMPILED
             pha
+            ldx   CurrentNPCIndex
             lda   NPCUpTopCompiled1,x
             pha
             _GTEUpdateSprite
 
-            pea   3
+            lda   CurrentNPCIndex
+            clc
+            adc   #NPC_SLOT_BASE+1
+            pha
             lda   #SPRITE_16X8+SPRITE_COMPILED
             pha
+            ldx   CurrentNPCIndex
             lda   NPCUpBotCompiled1,x
             pha
             _GTEUpdateSprite
             rts
 
 :uframe0
-            pea   2
+            lda   CurrentNPCIndex
+            clc
+            adc   #NPC_SLOT_BASE
+            pha
             lda   #SPRITE_16X16+SPRITE_COMPILED
             pha
+            ldx   CurrentNPCIndex
             lda   NPCUpTopCompiled0,x
             pha
             _GTEUpdateSprite
 
-            pea   3
+            lda   CurrentNPCIndex
+            clc
+            adc   #NPC_SLOT_BASE+1
+            pha
             lda   #SPRITE_16X8+SPRITE_COMPILED
             pha
+            ldx   CurrentNPCIndex
             lda   NPCUpBotCompiled0,x
             pha
             _GTEUpdateSprite
