@@ -1141,17 +1141,18 @@ UpdateAllNPCs
 
 :no_ai
             ; NPCDirection is set by AI functions (patrol/chase)
-            ; Validate screen coordinates before moving sprite
-            ; Skip _GTEMoveSprite if offscreen (prevents crash)
+            ; Check if sprite is on screen or needs to be moved off-screen
             lda   NPCScreenX,x
-            bmi   :next             ; Negative X (off left)
+            bmi   :move_offscreen   ; Negative X (off left)
             cmp   #160
-            bcs   :next             ; >= 160 (off right)
+            bcs   :move_offscreen   ; >= 160 (off right)
             lda   NPCScreenY,x
-            bmi   :next             ; Negative Y (off top)
+            bmi   :move_offscreen   ; Negative Y (off top)
             cmp   #116
-            bcs   :next             ; >= 116 (off bottom)
+            bcs   :move_offscreen   ; >= 116 (off bottom)
 
+            ; Sprite is on screen - move to actual position
+:move_onscreen
             ; Calculate sprite slot for this NPC
             ; Slot = NPC_SLOT_BASE + CurrentNPCIndex (since index is already *2)
             lda   CurrentNPCIndex
@@ -1159,14 +1160,14 @@ UpdateAllNPCs
             adc   #NPC_SLOT_BASE
             pha                     ; Top sprite slot
 
-            ; Move top sprite
+            ; Move top sprite to actual position
             lda   NPCScreenX,x
             pha
             lda   NPCScreenY,x
             pha
             _GTEMoveSprite
 
-            ; Move bottom sprite (NEW)
+            ; Move bottom sprite to actual position
             ldx   CurrentNPCIndex
             txa
             clc
@@ -1178,6 +1179,27 @@ UpdateAllNPCs
             clc
             adc   #15               ; Y offset for bottom sprite
             pha
+            _GTEMoveSprite
+            bra   :next
+
+:move_offscreen
+            ; Sprite is off screen - move to safe off-screen position
+            lda   CurrentNPCIndex
+            clc
+            adc   #NPC_SLOT_BASE
+            pha                     ; Top sprite slot
+            pea   200               ; Off-screen X
+            pea   200               ; Off-screen Y
+            _GTEMoveSprite
+
+            ; Move bottom sprite off-screen too
+            ldx   CurrentNPCIndex
+            txa
+            clc
+            adc   #NPC_SLOT_BASE+1
+            pha
+            pea   200               ; Off-screen X
+            pea   200               ; Off-screen Y
             _GTEMoveSprite
 
 :next
