@@ -179,6 +179,7 @@ InitNPC0Sprites
             pea   NPC0_DOWN_TOP_VBUFF_0
             _GTECompileSpriteStamp
             pla
+            ldx   #0*2
             sta   NPCDownTopCompiled0,x
 
 ; Down Frame 0 - Bottom
@@ -194,6 +195,7 @@ InitNPC0Sprites
             pea   NPC0_DOWN_BOT_VBUFF_0
             _GTECompileSpriteStamp
             pla
+            ldx   #0*2
             sta   NPCDownBotCompiled0,x
 
 ; Down Frame 1 - Top
@@ -209,6 +211,7 @@ InitNPC0Sprites
             pea   NPC0_DOWN_TOP_VBUFF_1
             _GTECompileSpriteStamp
             pla
+            ldx   #0*2
             sta   NPCDownTopCompiled1,x
 
 ; Down Frame 1 - Bottom
@@ -224,6 +227,7 @@ InitNPC0Sprites
             pea   NPC0_DOWN_BOT_VBUFF_1
             _GTECompileSpriteStamp
             pla
+            ldx   #0*2
             sta   NPCDownBotCompiled1,x
 
 ; Left Frame 0 - Top
@@ -239,6 +243,7 @@ InitNPC0Sprites
             pea   NPC0_LEFT_TOP_VBUFF_0
             _GTECompileSpriteStamp
             pla
+            ldx   #0*2
             sta   NPCLeftTopCompiled0,x
 
 ; Left Frame 0 - Bottom
@@ -254,6 +259,7 @@ InitNPC0Sprites
             pea   NPC0_LEFT_BOT_VBUFF_0
             _GTECompileSpriteStamp
             pla
+            ldx   #0*2
             sta   NPCLeftBotCompiled0,x
 
 ; Left Frame 1 - Top
@@ -269,6 +275,7 @@ InitNPC0Sprites
             pea   NPC0_LEFT_TOP_VBUFF_1
             _GTECompileSpriteStamp
             pla
+            ldx   #0*2
             sta   NPCLeftTopCompiled1,x
 
 ; Left Frame 1 - Bottom
@@ -284,6 +291,7 @@ InitNPC0Sprites
             pea   NPC0_LEFT_BOT_VBUFF_1
             _GTECompileSpriteStamp
             pla
+            ldx   #0*2
             sta   NPCLeftBotCompiled1,x
 
 ; Up Frame 0 - Top
@@ -299,6 +307,7 @@ InitNPC0Sprites
             pea   NPC0_UP_TOP_VBUFF_0
             _GTECompileSpriteStamp
             pla
+            ldx   #0*2
             sta   NPCUpTopCompiled0,x
 
 ; Up Frame 0 - Bottom
@@ -314,6 +323,7 @@ InitNPC0Sprites
             pea   NPC0_UP_BOT_VBUFF_0
             _GTECompileSpriteStamp
             pla
+            ldx   #0*2
             sta   NPCUpBotCompiled0,x
 
 ; Up Frame 1 - Top
@@ -329,6 +339,7 @@ InitNPC0Sprites
             pea   NPC0_UP_TOP_VBUFF_1
             _GTECompileSpriteStamp
             pla
+            ldx   #0*2
             sta   NPCUpTopCompiled1,x
 
 ; Up Frame 1 - Bottom
@@ -344,6 +355,7 @@ InitNPC0Sprites
             pea   NPC0_UP_BOT_VBUFF_1
             _GTECompileSpriteStamp
             pla
+            ldx   #0*2
             sta   NPCUpBotCompiled1,x
 
             rts
@@ -367,6 +379,7 @@ InitNPC1Sprites
             pea   NPC1_DOWN_TOP_VBUFF_0
             _GTECompileSpriteStamp
             pla
+            ldx   #1*2
             sta   NPCDownTopCompiled0,x
 
 ; Down Frame 0 - Bottom
@@ -382,6 +395,7 @@ InitNPC1Sprites
             pea   NPC1_DOWN_BOT_VBUFF_0
             _GTECompileSpriteStamp
             pla
+            ldx   #1*2
             sta   NPCDownBotCompiled0,x
 
 ; Down Frame 1 - Top
@@ -397,6 +411,7 @@ InitNPC1Sprites
             pea   NPC1_DOWN_TOP_VBUFF_1
             _GTECompileSpriteStamp
             pla
+            ldx   #1*2
             sta   NPCDownTopCompiled1,x
 
 ; Down Frame 1 - Bottom
@@ -412,6 +427,7 @@ InitNPC1Sprites
             pea   NPC1_DOWN_BOT_VBUFF_1
             _GTECompileSpriteStamp
             pla
+            ldx   #1*2
             sta   NPCDownBotCompiled1,x
 
 ; Left Frame 0 - Top
@@ -427,6 +443,7 @@ InitNPC1Sprites
             pea   NPC1_LEFT_TOP_VBUFF_0
             _GTECompileSpriteStamp
             pla
+            ldx   #1*2
             sta   NPCLeftTopCompiled0,x
 
 ; Left Frame 0 - Bottom
@@ -442,6 +459,7 @@ InitNPC1Sprites
             pea   NPC1_LEFT_BOT_VBUFF_0
             _GTECompileSpriteStamp
             pla
+            ldx   #1*2
             sta   NPCLeftBotCompiled0,x
 
 ; Left Frame 1 - Top
@@ -457,6 +475,7 @@ InitNPC1Sprites
             pea   NPC1_LEFT_TOP_VBUFF_1
             _GTECompileSpriteStamp
             pla
+            ldx   #1*2
             sta   NPCLeftTopCompiled1,x
 
 ; Left Frame 1 - Bottom
@@ -472,6 +491,7 @@ InitNPC1Sprites
             pea   NPC1_LEFT_BOT_VBUFF_1
             _GTECompileSpriteStamp
             pla
+            ldx   #1*2
             sta   NPCLeftBotCompiled1,x
 
 ; Up Frame 0 - Top
@@ -487,6 +507,7 @@ InitNPC1Sprites
             pea   NPC1_UP_TOP_VBUFF_0
             _GTECompileSpriteStamp
             pla
+            ldx   #1*2
             sta   NPCUpTopCompiled0,x
 
 ; Up Frame 0 - Bottom
@@ -502,6 +523,7 @@ InitNPC1Sprites
             pea   NPC1_UP_BOT_VBUFF_0
             _GTECompileSpriteStamp
             pla
+            ldx   #1*2
             sta   NPCUpBotCompiled0,x
 
 ; Up Frame 1 - Top
@@ -517,6 +539,7 @@ InitNPC1Sprites
             pea   NPC1_UP_TOP_VBUFF_1
             _GTECompileSpriteStamp
             pla
+            ldx   #1*2
             sta   NPCUpTopCompiled1,x
 
 ; Up Frame 1 - Bottom
@@ -532,6 +555,7 @@ InitNPC1Sprites
             pea   NPC1_UP_BOT_VBUFF_1
             _GTECompileSpriteStamp
             pla
+            ldx   #1*2
             sta   NPCUpBotCompiled1,x
 
             rts
@@ -680,6 +704,9 @@ SpawnNPC1
             ; Initialize sprites for NPC 1 (compiles all 12 frames)
             lda   #333              ; Base tile ID
             jsr   InitNPC1Sprites
+
+            ; reset index to index 1 * array stride
+            ldx   #1*2
 
             ; Set sprite flags for 16x24 sprite
             lda   #SPRITE_16X16+SPRITE_COMPILED
