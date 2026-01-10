@@ -694,9 +694,9 @@ SpawnNPC1
             sta   NPCAIType,x
             lda   #1                ; Patrol speed
             sta   NPCSpeed,x
-            lda   #500              ; Patrol min X
+            lda   #40               ; Patrol min X (near spawn at 80)
             sta   NPCPatrolMin,x
-            lda   #700              ; Patrol max X
+            lda   #120              ; Patrol max X (visible on screen)
             sta   NPCPatrolMax,x
             stz   NPCPatrolDir,x    ; Start moving left
             stz   NPCState,x        ; Start in patrol mode
@@ -705,7 +705,7 @@ SpawnNPC1
             lda   #333              ; Base tile ID
             jsr   InitNPC1Sprites
 
-            ; reset index to index 1 * array stride
+            ; reset x to index 1 * array stride
             ldx   #1*2
 
             ; Set sprite flags for 16x24 sprite
@@ -741,6 +741,8 @@ SpawnNPC1
             lda   NPCScreenY,x
             pha
             _GTEAddSprite
+
+            ldx #1*2
 
             ; Add bottom sprite (NPC 1 uses slot 5)
             pea   5                 ; Slot 5
@@ -853,7 +855,9 @@ NPCHandleDown
             pha
             _GTEUpdateSprite
 
-            lda   CurrentNPCIndex
+            ldx   CurrentNPCIndex
+
+            txa
             clc
             adc   #NPC_SLOT_BASE+1
             pha                     ; Bottom sprite slot
@@ -878,7 +882,8 @@ NPCHandleDown
             pha
             _GTEUpdateSprite
 
-            lda   CurrentNPCIndex
+            ldx   CurrentNPCIndex
+            txa
             clc
             adc   #NPC_SLOT_BASE+1
             pha
@@ -908,7 +913,8 @@ NPCHandleRight
             pha
             _GTEUpdateSprite
 
-            lda   CurrentNPCIndex
+            ldx   CurrentNPCIndex
+            txa
             clc
             adc   #NPC_SLOT_BASE+1
             pha
@@ -932,7 +938,8 @@ NPCHandleRight
             pha
             _GTEUpdateSprite
 
-            lda   CurrentNPCIndex
+            ldx   CurrentNPCIndex
+            txa
             clc
             adc   #NPC_SLOT_BASE+1
             pha
@@ -962,7 +969,8 @@ NPCHandleLeft
             pha
             _GTEUpdateSprite
 
-            lda   CurrentNPCIndex
+            ldx   CurrentNPCIndex
+            txa
             clc
             adc   #NPC_SLOT_BASE+1
             pha
@@ -986,7 +994,8 @@ NPCHandleLeft
             pha
             _GTEUpdateSprite
 
-            lda   CurrentNPCIndex
+            ldx   CurrentNPCIndex
+            txa
             clc
             adc   #NPC_SLOT_BASE+1
             pha
@@ -1016,7 +1025,8 @@ NPCHandleUp
             pha
             _GTEUpdateSprite
 
-            lda   CurrentNPCIndex
+            ldx   CurrentNPCIndex
+            txa
             clc
             adc   #NPC_SLOT_BASE+1
             pha
@@ -1040,7 +1050,8 @@ NPCHandleUp
             pha
             _GTEUpdateSprite
 
-            lda   CurrentNPCIndex
+            ldx   CurrentNPCIndex
+            txa
             clc
             adc   #NPC_SLOT_BASE+1
             pha
@@ -1156,7 +1167,8 @@ UpdateAllNPCs
             _GTEMoveSprite
 
             ; Move bottom sprite (NEW)
-            lda   CurrentNPCIndex
+            ldx   CurrentNPCIndex
+            txa
             clc
             adc   #NPC_SLOT_BASE+1  ; Bottom sprite = top + 1
             pha
