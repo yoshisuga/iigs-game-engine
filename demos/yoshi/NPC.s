@@ -590,7 +590,7 @@ SpawnEnemy
             ; Set type and behavior
             lda   #NPC_FRIENDLY     ; Friendly (triggers dialog)
             sta   NPCBehavior,x
-            lda   #0                ; Character ID 0
+            lda   #1                ; Character ID 1 (Village Guardian)
             sta   NPCCharacterID,x
 
             ; Set AI: Patrol with chase behavior
@@ -659,7 +659,7 @@ SpawnEnemy
 
             rts
 
-; Spawn NPC 1 - Hostile enemy (patrol)
+; Spawn NPC 1 - Man (patrol)
 SpawnNPC1
 ; Spawn NPC 1 - Patrol AI with animation
             ldx   #1*2              ; NPC index 1
@@ -681,9 +681,10 @@ SpawnNPC1
             stz   NPCAnimTimer,x
 
             ; Set type and behavior
-            lda   #NPC_HOSTILE      ; Hostile enemy
+            lda   #NPC_FRIENDLY
             sta   NPCBehavior,x
-            stz   NPCCharacterID,x  ; No dialog
+            lda   #3
+            sta   NPCCharacterID,x
 
             ; Combat stats
             lda   #10
@@ -786,7 +787,8 @@ SpawnNPC2
             ; Set type and behavior
             lda   #NPC_FRIENDLY     ; Friendly NPC
             sta   NPCBehavior,x
-            stz   NPCCharacterID,x  ; No dialog
+            lda   #2                ; Character ID 2 (Merchant)
+            sta   NPCCharacterID,x
 
             ; Combat stats
             lda   #10
@@ -1561,23 +1563,52 @@ CheckAllNPCCollisions
             bra   :hostile_npc
 
 :friendly_npc
-            ; Trigger dialog for friendly NPCs
+            ; Trigger dialog for friendly NPCs using lookup table
             lda   DialogState
             bne   :skip_trigger     ; Dialog already active
 
-            ; Trigger dialogs (enemy NPC has 3 dialogs)
-            lda   #Dialog1Lines
-            ldx   #2                ; 2 lines
+            ; Get character ID from NPC
+            ldx   CurrentNPCIndex
+            lda   NPCCharacterID,x
+            beq   :skip_trigger     ; Character ID 0 = no dialog
+
+            ; Look up character dialog info
+            ; CharacterDialogTable is indexed by Character ID * 2 (word pointers)
+            asl   a                 ; × 2 for word offset
+            tay
+            lda   CharacterDialogTable,y
+            sta   Tmp0              ; Tmp0 = pointer to character dialog info
+
+            ; Trigger Dialog 1
+            ldy   #0                ; Offset 0: Dialog 1 line count
+            lda   (Tmp0),y
+            beq   :skip_d1          ; Skip if 0 lines
+            tax                     ; X = line count
+            ldy   #2                ; Offset 2: Dialog 1 lines pointer
+            lda   (Tmp0),y
             jsr   TriggerMultiLineDialog
 
-            lda   #Dialog2Lines
-            ldx   #3                ; 3 lines
+:skip_d1
+            ; Trigger Dialog 2
+            ldy   #4                ; Offset 4: Dialog 2 line count
+            lda   (Tmp0),y
+            beq   :skip_d2          ; Skip if 0 lines
+            tax                     ; X = line count
+            ldy   #6                ; Offset 6: Dialog 2 lines pointer
+            lda   (Tmp0),y
             jsr   TriggerMultiLineDialog
 
-            lda   #Dialog3Lines
-            ldx   #2                ; 2 lines
+:skip_d2
+            ; Trigger Dialog 3
+            ldy   #8                ; Offset 8: Dialog 3 line count
+            lda   (Tmp0),y
+            beq   :skip_d3          ; Skip if 0 lines
+            tax                     ; X = line count
+            ldy   #10               ; Offset 10: Dialog 3 lines pointer
+            lda   (Tmp0),y
             jsr   TriggerMultiLineDialog
 
+:skip_d3
 :skip_trigger
             ldx   CurrentNPCIndex
             bra   :mark_colliding
@@ -1606,21 +1637,100 @@ CheckAllNPCCollisions
             rts
 
 ; ========================================
-; DIALOG DATA (from old Enemy.s)
+; DIALOG DATA - Character-based lookup system
+; ========================================
+
+; Character Dialog Lookup Table
+; Maps Character ID (0-based) to dialog info structure
+; Each entry: 2 bytes = address of character dialog info
+
+CharacterDialogTable
+            dw   Character0DialogInfo    ; Character ID 0 (not used)
+            dw   Character1DialogInfo    ; Character ID 1 (Guardian)
+            dw   Character2DialogInfo    ; Character ID 2 (Merchant)
+            dw   Character3DialogInfo    ; Character ID 3 (Child)
+            ; Add more as needed
+
+; Character Dialog Info Structure (6 bytes each):
+; +0: Dialog 1 line count (word)
+; +2: Dialog 1 lines pointer (word)
+; +4: Dialog 2 line count (word)
+; +6: Dialog 2 lines pointer (word)
+; +8: Dialog 3 line count (word)
+; +10: Dialog 3 lines pointer (word)
+
+Character0DialogInfo
+            dw   0, 0              ; No dialog
+            dw   0, 0              ; No dialog
+            dw   0, 0              ; No dialog
+
+Character1DialogInfo
+            dw   2, Dialog1_C1Lines    ; Dialog 1: 2 lines
+            dw   3, Dialog2_C1Lines    ; Dialog 2: 3 lines
+            dw   2, Dialog3_C1Lines    ; Dialog 3: 2 lines
+
+Character2DialogInfo
+            dw   2, Dialog1_C2Lines    ; Dialog 1: 2 lines
+            dw   2, Dialog2_C2Lines    ; Dialog 2: 2 lines
+            dw   2, Dialog3_C2Lines    ; Dialog 3: 2 lines
+
+Character3DialogInfo
+            dw   1, Dialog1_C3Lines    ; Dialog 1: 1 line
+            dw   2, Dialog2_C3Lines    ; Dialog 2: 2 lines
+            dw   1, Dialog3_C3Lines    ; Dialog 3: 1 line
+
+; ========================================
+; CHARACTER 1 DIALOGS (Village Guardian)
 ; ========================================
 
 ; Dialog 1 - Greeting (2 lines)
-Dialog1Lines        dw   D1_Line1, D1_Line2
-D1_Line1            str  'WELCOME TO'
-D1_Line2            str  'LANCE VILLAGE!'
+Dialog1_C1Lines     dw   D1_C1_Line1, D1_C1_Line2
+D1_C1_Line1         str  'WELCOME TO'
+D1_C1_Line2         str  'LANCE VILLAGE!'
 
 ; Dialog 2 - Introduction (3 lines)
-Dialog2Lines        dw   D2_Line1, D2_Line2, D2_Line3
-D2_Line1            str  'I AM THE VILLAGE'
-D2_Line2            str  'GUARDIAN. I WATCH OVER'
-D2_Line3            str  'THIS PEACEFUL PLACE.'
+Dialog2_C1Lines     dw   D2_C1_Line1, D2_C1_Line2, D2_C1_Line3
+D2_C1_Line1         str  'I AM THE VILLAGE'
+D2_C1_Line2         str  'GUARDIAN. I WATCH OVER'
+D2_C1_Line3         str  'THIS PEACEFUL PLACE.'
 
 ; Dialog 3 - Farewell (2 lines)
-Dialog3Lines        dw   D3_Line1, D3_Line2
-D3_Line1            str  'ENJOY YOUR STAY'
-D3_Line2            str  'AND BE SAFE!'
+Dialog3_C1Lines     dw   D3_C1_Line1, D3_C1_Line2
+D3_C1_Line1         str  'ENJOY YOUR STAY'
+D3_C1_Line2         str  'AND BE SAFE!'
+
+; ========================================
+; CHARACTER 2 DIALOGS (Merchant)
+; ========================================
+
+; Dialog 1 - Greeting (2 lines)
+Dialog1_C2Lines     dw   D1_C2_Line1, D1_C2_Line2
+D1_C2_Line1         str  'HELLO TRAVELER!'
+D1_C2_Line2         str  'CARE TO BROWSE?'
+
+; Dialog 2 - Sales pitch (2 lines)
+Dialog2_C2Lines     dw   D2_C2_Line1, D2_C2_Line2
+D2_C2_Line1         str  'I HAVE THE FINEST'
+D2_C2_Line2         str  'WARES IN THE LAND!'
+
+; Dialog 3 - Farewell (2 lines)
+Dialog3_C2Lines     dw   D3_C2_Line1, D3_C2_Line2
+D3_C2_Line1         str  'COME BACK SOON!'
+D3_C2_Line2         str  'GOOD PRICES HERE!'
+
+; ========================================
+; CHARACTER 3 DIALOGS (Child)
+; ========================================
+
+; Dialog 1 - Greeting (1 line)
+Dialog1_C3Lines     dw   D1_C3_Line1
+D1_C3_Line1         str  'HI MISTER!'
+
+; Dialog 2 - Question (2 lines)
+Dialog2_C3Lines     dw   D2_C3_Line1, D2_C3_Line2
+D2_C3_Line1         str  'ARE YOU AN'
+D2_C3_Line2         str  'ADVENTURER?'
+
+; Dialog 3 - Farewell (1 line)
+Dialog3_C3Lines     dw   D3_C3_Line1
+D3_C3_Line1         str  'BYE BYE!'
