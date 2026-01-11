@@ -43,6 +43,7 @@ PlayerAccessory    ds   2      ; Equipped accessory ID
 PlayerGold         ds   2      ; Currency
 PlayerKeys         ds   2      ; Number of keys
 PlayerStatus       ds   2      ; Status effects (bitfield)
+PlayerInvincibilityTimer ds 2 ; Frames remaining of invincibility (0 = can take damage)
 
 ; ========================================
 ; COMPILED SPRITE ADDRESS ARRAYS
@@ -105,6 +106,7 @@ InitPlayer
             stz   PlayerGold         ; Start with 0 gold
             stz   PlayerKeys         ; Start with 0 keys
             stz   PlayerStatus       ; No status effects
+            stz   PlayerInvincibilityTimer ; Not invincible at start
 
             ; Create all sprite frames and add to screen
             jsr   InitPlayerSpriteFrames
@@ -618,4 +620,150 @@ UpdateCamera
             sta   PlayerScreenY
 
 :done
+            rts
+
+; ========================================
+; COMBAT SYSTEM
+; ========================================
+
+UpdatePlayerInvincibility
+; Decrement invincibility timer each frame
+            lda   PlayerInvincibilityTimer
+            beq   :done              ; Already 0, skip
+            dec   a
+            sta   PlayerInvincibilityTimer
+:done
+            rts
+
+TakeDamage
+; Player takes damage from enemy
+; Input: A = damage amount
+;        X = NPC index (for knockback calculation)
+; Preserves: X register (important for caller context)
+            ; Save damage amount and NPC index
+            sta   Tmp0
+            phx                      ; Save X (NPC index)
+
+            ; Check if invincible
+            lda   PlayerInvincibilityTimer
+            bne   :skip_damage       ; Still invincible, no damage or knockback
+
+            ; Apply defense (damage - defense, minimum 1)
+            lda   Tmp0               ; Restore damage amount
+            sec
+            sbc   PlayerDefense
+            bpl   :apply_damage
+            lda   #1                 ; Minimum 1 damage
+:apply_damage
+            sta   Tmp0               ; Save final damage amount
+
+            ; Subtract from health
+            lda   PlayerHealth
+            sec
+            sbc   Tmp0
+            bpl   :set_health
+            lda   #0                 ; Can't go below 0
+:set_health
+            sta   PlayerHealth
+
+            ; Set invincibility period
+            lda   #10
+            sta   PlayerInvincibilityTimer
+
+            ; Apply knockback (X already on stack)
+            plx                      ; Restore NPC index
+            phx                      ; Save it again for final restore
+            jsr   ApplyKnockback     ; Push player away
+
+:skip_damage
+            plx                      ; Restore X register
+            rts
+
+ApplyKnockback
+; Push player away from enemy on collision
+; Input: X = NPC index (must be preserved)
+; Uses: Tmp0-Tmp3
+            phx                     ; Save NPC index
+
+            ; Calculate direction from enemy to player
+            lda   PlayerGlobalX
+            sec
+            sbc   NPCGlobalX,x
+            sta   Tmp0              ; Tmp0 = dx (player X - enemy X)
+
+            lda   PlayerGlobalY
+            sec
+            sbc   NPCGlobalY,x
+            sta   Tmp1              ; Tmp1 = dy (player Y - enemy Y)
+
+            ; Determine if collision is more horizontal or vertical
+            ; Compare absolute values
+            lda   Tmp0
+            bpl   :dx_positive
+            eor   #$FFFF            ; Negate if negative
+            inc   a
+:dx_positive
+            sta   Tmp2              ; Tmp2 = abs(dx)
+
+            lda   Tmp1
+            bpl   :dy_positive
+            eor   #$FFFF            ; Negate if negative
+            inc   a
+:dy_positive
+            sta   Tmp3              ; Tmp3 = abs(dy)
+
+            ; Compare: if abs(dx) > abs(dy), knockback is horizontal
+            lda   Tmp2
+            cmp   Tmp3
+            bcs   :horizontal_knockback
+
+:vertical_knockback
+            ; Push along Y axis
+            lda   Tmp1              ; dy
+            bpl   :push_down
+:push_up
+            ; Player is above enemy, push up
+            lda   PlayerGlobalY
+            sec
+            sbc   #8                ; Knockback distance
+            bpl   :set_y
+            lda   #0
+            bra   :set_y
+:push_down
+            ; Player is below enemy, push down
+            lda   PlayerGlobalY
+            clc
+            adc   #8                ; Knockback distance
+            cmp   #512              ; Max world Y
+            bcc   :set_y
+            lda   #511
+:set_y
+            sta   PlayerGlobalY
+            bra   :done
+
+:horizontal_knockback
+            ; Push along X axis
+            lda   Tmp0              ; dx
+            bpl   :push_right
+:push_left
+            ; Player is left of enemy, push left
+            lda   PlayerGlobalX
+            sec
+            sbc   #8                ; Knockback distance
+            bpl   :set_x
+            lda   #0
+            bra   :set_x
+:push_right
+            ; Player is right of enemy, push right
+            lda   PlayerGlobalX
+            clc
+            adc   #8                ; Knockback distance
+            cmp   #960              ; Max world X
+            bcc   :set_x
+            lda   #959
+:set_x
+            sta   PlayerGlobalX
+
+:done
+            plx                     ; Restore NPC index
             rts

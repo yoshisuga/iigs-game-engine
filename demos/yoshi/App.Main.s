@@ -203,6 +203,7 @@ Main
             jsr   UpdateCamera
             jsr   UpdatePlayerAnimation
             jsr   UpdateNPCAnimation        ; NEW: Update NPC animation
+            jsr   UpdatePlayerInvincibility ; Update invincibility timer
             jsr   UpdateAllNPCs
 
             ; Check collision with NPCs (triggers dialog if colliding)

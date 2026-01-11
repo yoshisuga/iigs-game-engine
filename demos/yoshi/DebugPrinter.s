@@ -199,8 +199,32 @@ BuildDebugStr
             lda   NumStr+4
             sta   DebugStr+38
 
-            lda   #39
+            ; Add health display
+            lda   #' '
+            sta   DebugStr+39
+            lda   #'H'
+            sta   DebugStr+40
+            lda   #'P'
+            sta   DebugStr+41
+            lda   #':'
+            sta   DebugStr+42
+            rep   #$20             ; Back to 16-bit A
+
+            lda   PlayerHealth
+            jsr   Num2Str4
+
+            sep   #$20             ; Switch to 8-bit A
+            lda   NumStr+2         ; Skip thousands
+            sta   DebugStr+43
+            lda   NumStr+3
+            sta   DebugStr+44
+            lda   NumStr+4
+            sta   DebugStr+45
+
+            lda   #46              ; Update length to include HP
             sta   DebugStr
+
+            rep   #$20             ; Back to 16-bit A
 
             ; tile collision directional checks
             lda   #'C'
@@ -422,24 +446,23 @@ BuildDebugStr
             rts
 
 BuildEnemyDebugStr
-; Build NPC 0 (enemy) debug string: "EGX:### EGY:### ESX:### ESY:### DIR:#"
-            ldx   #0*2             ; NPC index 0 (enemy)
+; Build combat debug string: "PHP:### EHP:### INV:##"
             sep   #$20             ; Switch to 8-bit A
-            lda   #'E'
+            lda   #'P'
             sta   TestStr+1
-            lda   #'G'
+            lda   #'H'
             sta   TestStr+2
-            lda   #'X'
+            lda   #'P'
             sta   TestStr+3
             lda   #':'
             sta   TestStr+4
             rep   #$20             ; Back to 16-bit A
 
-            lda   NPCGlobalX,x
+            lda   PlayerHealth
             jsr   Num2Str4
 
             sep   #$20             ; Switch to 8-bit A
-            lda   NumStr+2         ; Skip thousands digit
+            lda   NumStr+2
             sta   TestStr+5
             lda   NumStr+3
             sta   TestStr+6
@@ -450,19 +473,20 @@ BuildEnemyDebugStr
             sta   TestStr+8
             lda   #'E'
             sta   TestStr+9
-            lda   #'G'
+            lda   #'H'
             sta   TestStr+10
-            lda   #'Y'
+            lda   #'P'
             sta   TestStr+11
             lda   #':'
             sta   TestStr+12
             rep   #$20             ; Back to 16-bit A
 
-            lda   NPCGlobalY,x
+            ldx   #0*2             ; NPC 0 (enemy)
+            lda   NPCHealth,x
             jsr   Num2Str4
 
             sep   #$20             ; Switch to 8-bit A
-            lda   NumStr+2         ; Skip thousands digit
+            lda   NumStr+2
             sta   TestStr+13
             lda   NumStr+3
             sta   TestStr+14
@@ -471,69 +495,26 @@ BuildEnemyDebugStr
 
             lda   #' '
             sta   TestStr+16
-            lda   #'E'
+            lda   #'I'
             sta   TestStr+17
-            lda   #'S'
+            lda   #'N'
             sta   TestStr+18
-            lda   #'X'
+            lda   #'V'
             sta   TestStr+19
             lda   #':'
             sta   TestStr+20
             rep   #$20             ; Back to 16-bit A
 
-            lda   NPCScreenX,x
+            lda   PlayerInvincibilityTimer
             jsr   Num2Str4
 
-            ldx   #0*2             ; Restore X (Num2Str4 may clobber it)
             sep   #$20             ; Switch to 8-bit A
-            lda   NumStr+2         ; Skip thousands digit
+            lda   NumStr+3         ; Last 2 digits
             sta   TestStr+21
-            lda   NumStr+3
+            lda   NumStr+4
             sta   TestStr+22
-            lda   NumStr+4
-            sta   TestStr+23
 
-            lda   #' '
-            sta   TestStr+24
-            lda   #'E'
-            sta   TestStr+25
-            lda   #'S'
-            sta   TestStr+26
-            lda   #'Y'
-            sta   TestStr+27
-            lda   #':'
-            sta   TestStr+28
-            rep   #$20             ; Back to 16-bit A
-
-            lda   NPCScreenY,x
-            jsr   Num2Str4
-
-            ldx   #0*2             ; Restore X
-            sep   #$20             ; Switch to 8-bit A
-            lda   NumStr+2         ; Skip thousands digit
-            sta   TestStr+29
-            lda   NumStr+3
-            sta   TestStr+30
-            lda   NumStr+4
-            sta   TestStr+31
-
-            lda   #' '
-            sta   TestStr+32
-            lda   #'D'
-            sta   TestStr+33
-            lda   #'I'
-            sta   TestStr+34
-            lda   #'R'
-            sta   TestStr+35
-            lda   #':'
-            sta   TestStr+36
-
-            lda   NPCDirection,x
-            clc
-            adc   #'0'
-            sta   TestStr+37
-
-            lda   #37              ; String length
+            lda   #22              ; String length
             sta   TestStr
 
             rep   #$20             ; Back to 16-bit A

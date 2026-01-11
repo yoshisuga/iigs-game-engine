@@ -588,10 +588,9 @@ SpawnEnemy
             stz   NPCAnimTimer,x    ; Reset timer
 
             ; Set type and behavior
-            lda   #NPC_FRIENDLY     ; Friendly (triggers dialog)
+            lda   #NPC_HOSTILE     ; Friendly (triggers dialog)
             sta   NPCBehavior,x
-            lda   #1                ; Character ID 1 (Village Guardian)
-            sta   NPCCharacterID,x
+            stz   NPCCharacterID,x
 
             ; Set AI: Patrol with chase behavior
             lda   #AI_PATROL
@@ -1614,9 +1613,12 @@ CheckAllNPCCollisions
             bra   :mark_colliding
 
 :hostile_npc
-            ; TODO: Damage player
-            ; For now, just mark collision
-            bra   :mark_colliding
+            ; Hostile NPC - deal damage to player (knockback handled in TakeDamage)
+            ldx   CurrentNPCIndex
+            lda   NPCDamage,x        ; Get NPC's damage
+            jsr   TakeDamage         ; Player takes damage and knockback (X preserved)
+            ldx   CurrentNPCIndex    ; Restore X to be safe
+            ; Fall through to mark collision
 
 :mark_colliding
             lda   #1
@@ -1632,9 +1634,10 @@ CheckAllNPCCollisions
             adc   #2
             sta   CurrentNPCIndex
             cmp   #MAX_NPCS*2
-            bcc   :loop
+            bcs   :done              ; If >= MAX_NPCS*2, exit
+            brl   :loop              ; Otherwise continue (long branch)
 
-            rts
+:done       rts
 
 ; ========================================
 ; DIALOG DATA - Character-based lookup system
