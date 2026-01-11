@@ -154,6 +154,9 @@ InitNPCs
             ; Spawn NPC 1
             jsr   SpawnNPC1
 
+            ; Spawn NPC 2 (reuses NPC 0's VBUFFs - same appearance)
+            jsr   SpawnNPC2
+
             rts
 
 ; ========================================
@@ -760,6 +763,132 @@ SpawnNPC1
 
             rts
 
+SpawnNPC2
+; Spawn NPC 2 - REUSES NPC 0's VBUFFs (same appearance as NPC 0)
+            ldx   #2*2              ; NPC index 2 (array offset = 2*2 = 4)
+
+            ; Mark active
+            lda   #1
+            sta   NPCActive,x
+
+            ; Set world position (near player)
+            lda   #100
+            sta   NPCGlobalX,x
+            lda   #120
+            sta   NPCGlobalY,x
+
+            ; Initialize animation state
+            lda   #DIR_DOWN
+            sta   NPCDirection,x
+            stz   NPCFrame,x
+            stz   NPCAnimTimer,x
+
+            ; Set type and behavior
+            lda   #NPC_FRIENDLY     ; Friendly NPC
+            sta   NPCBehavior,x
+            stz   NPCCharacterID,x  ; No dialog
+
+            ; Combat stats
+            lda   #10
+            sta   NPCHealth,x
+            sta   NPCMaxHealth,x
+            lda   #3                ; 3 damage per hit
+            sta   NPCDamage,x
+
+            ; Set AI: Patrol
+            lda   #AI_PATROL
+            sta   NPCAIType,x
+            lda   #1                ; Patrol speed
+            sta   NPCSpeed,x
+            lda   #60               ; Patrol min X
+            sta   NPCPatrolMin,x
+            lda   #140              ; Patrol max X
+            sta   NPCPatrolMax,x
+            stz   NPCPatrolDir,x    ; Start moving left
+            stz   NPCState,x        ; Start in patrol mode
+
+            ; REUSE NPC 0's compiled sprites (no InitNPC2Sprites call!)
+            ; Copy compiled addresses from NPC 0 (index 0*2 = 0)
+            ldy   #0*2              ; NPC 0 index
+            lda   NPCDownTopCompiled0,y
+            sta   NPCDownTopCompiled0,x
+            lda   NPCDownTopCompiled1,y
+            sta   NPCDownTopCompiled1,x
+            lda   NPCDownBotCompiled0,y
+            sta   NPCDownBotCompiled0,x
+            lda   NPCDownBotCompiled1,y
+            sta   NPCDownBotCompiled1,x
+
+            lda   NPCLeftTopCompiled0,y
+            sta   NPCLeftTopCompiled0,x
+            lda   NPCLeftTopCompiled1,y
+            sta   NPCLeftTopCompiled1,x
+            lda   NPCLeftBotCompiled0,y
+            sta   NPCLeftBotCompiled0,x
+            lda   NPCLeftBotCompiled1,y
+            sta   NPCLeftBotCompiled1,x
+
+            lda   NPCUpTopCompiled0,y
+            sta   NPCUpTopCompiled0,x
+            lda   NPCUpTopCompiled1,y
+            sta   NPCUpTopCompiled1,x
+            lda   NPCUpBotCompiled0,y
+            sta   NPCUpBotCompiled0,x
+            lda   NPCUpBotCompiled1,y
+            sta   NPCUpBotCompiled1,x
+
+            ; Set sprite flags for 16x24 sprite
+            lda   #SPRITE_16X16+SPRITE_COMPILED
+            sta   NPCTopFlags,x
+            lda   #SPRITE_16X8+SPRITE_COMPILED
+            sta   NPCBotFlags,x
+
+            ; Set initial sprite addresses (Down frame 0)
+            lda   NPCDownTopCompiled0,x
+            sta   NPCTopAddr,x
+            lda   NPCDownBotCompiled0,x
+            sta   NPCBotAddr,x
+
+            ; Calculate screen position
+            lda   NPCGlobalX,x
+            sec
+            sbc   ScreenX
+            sta   NPCScreenX,x
+            lda   NPCGlobalY,x
+            sec
+            sbc   ScreenY
+            sta   NPCScreenY,x
+
+            ; Add top sprite (NPC 2 uses slot 6 - different from NPC 0's slot 2)
+            pea   6                 ; Slot 6
+            lda   NPCTopFlags,x
+            pha
+            lda   NPCTopAddr,x      ; Same VBUFF as NPC 0
+            pha
+            lda   NPCScreenX,x
+            pha
+            lda   NPCScreenY,x
+            pha
+            _GTEAddSprite
+
+            ldx   #2*2
+
+            ; Add bottom sprite (NPC 2 uses slot 7 - different from NPC 0's slot 3)
+            pea   7                 ; Slot 7
+            lda   NPCBotFlags,x
+            pha
+            lda   NPCBotAddr,x      ; Same VBUFF as NPC 0
+            pha
+            lda   NPCScreenX,x
+            pha
+            lda   NPCScreenY,x
+            clc
+            adc   #15               ; Y offset for bottom sprite
+            pha
+            _GTEAddSprite
+
+            rts
+
 ; ========================================
 ; NPC ANIMATION UPDATE
 ; ========================================
@@ -814,7 +943,7 @@ UpdateNPCSprites
 ; Supports NPC 0 and NPC 1
 
             ; Only handle NPC 0 and 1 (indices 0 and 2)
-            cpx   #4
+            cpx   #6
             bcs   :skip_update
 
             ; Get direction and jump to handler (use short branches)
