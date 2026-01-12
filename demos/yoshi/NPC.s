@@ -71,6 +71,8 @@ NPCAnimTimer     ds  MAX_NPCS*2  ; Frame counter for animation timing
 ; Collision tracking
 NPCWasColliding ds  MAX_NPCS*2  ; Collision state from last frame (rising edge detection)
 
+NPCDeathTimer    ds   MAX_NPCS*2 ; death animation timer
+
 ; ========================================
 ; PER-NPC COMPILED SPRITE ADDRESSES
 ; ========================================
@@ -145,6 +147,7 @@ InitNPCs
             stz   NPCFrame,x
             stz   NPCAnimTimer,x
             stz   NPCWasColliding,x
+            stz   NPCDeathTimer,x
             inx
             inx
             cpx   #MAX_NPCS*2
@@ -595,7 +598,7 @@ SpawnEnemy
             stz   NPCCharacterID,x
 
             ; Combat stats
-            lda   #100
+            lda   #30
             sta   NPCHealth,x
             sta   NPCMaxHealth,x
 
@@ -1218,6 +1221,11 @@ UpdateAllNPCs
             jmp   :next
 
 :active
+            lda   NPCDeathTimer,x
+            beq   :no_death_anim
+            jmp   NPCDeathAnimation
+
+:no_death_anim
             ; Update screen position from scroll
             lda   NPCGlobalX,x
             sec
@@ -1602,32 +1610,8 @@ NPCTakeDamage
             bne   :apply_knockback
 
             ; NPC died - deactivate and hide sprites
-            stz   NPCActive,x
-
-            ; Hide sprites using SPRITE_HIDE flag (like Zelda demo does)
-            plx                     ; Get NPC index
-            phx                     ; Save again
-            txa
-            clc
-            adc   #NPC_SLOT_BASE
-            pha                     ; Top sprite slot
-            pea   SPRITE_HIDE       ; Hide flag
-            lda   NPCTopAddr,x      ; Keep same sprite data
-            pha
-            _GTEUpdateSprite
-
-            plx
-            phx
-            txa
-            clc
-            adc   #NPC_SLOT_BASE+1
-            pha                     ; Bottom sprite slot
-            pea   SPRITE_HIDE       ; Hide flag
-            ldx   CurrentNPCIndex   ; Restore X
-            lda   NPCBotAddr,x      ; Keep same sprite data
-            pha
-            _GTEUpdateSprite
-
+            lda   #10
+            sta   NPCDeathTimer,X
             bra   :skip_damage
 
 :apply_knockback
@@ -1729,6 +1713,94 @@ ApplyNPCKnockback
 
 :done
             plx                     ; Restore NPC index
+            rts
+
+NPCDeathAnimation
+            ldx   CurrentNPCIndex
+            lda   NPCDeathTimer,x
+            dec
+            sta   NPCDeathTimer,x
+            bne   :do_flash            
+
+            ; Timer expired - actually kill the NPC
+            stz   NPCActive,x
+            ; Hide sprites permanently
+            lda   CurrentNPCIndex
+            clc
+            adc   #NPC_SLOT_BASE
+            pha
+            pea   SPRITE_HIDE
+            lda   NPCTopAddr,x
+            pha
+            _GTEUpdateSprite
+
+            ldx   CurrentNPCIndex
+            txa
+            clc
+            adc   #NPC_SLOT_BASE+1
+            pha
+            pea   SPRITE_HIDE
+            ldx   CurrentNPCIndex
+            lda   NPCBotAddr,x
+            pha
+            _GTEUpdateSprite
+            rts
+
+:do_flash
+            ; Flash sprite based on timer value
+            ; If (timer & 2) == 0, show sprite, else hide sprite
+            lda   NPCDeathTimer,x
+            and   #$0002            ; Check bit 1
+            bne   :hide_sprite
+
+:show_sprite
+            ; Show sprite (use normal flags)
+            lda   CurrentNPCIndex
+            clc
+            adc   #NPC_SLOT_BASE
+            pha
+            ldx   CurrentNPCIndex
+            lda   NPCTopFlags,x     ; Normal flags
+            pha
+            lda   NPCTopAddr,x
+            pha
+            _GTEUpdateSprite
+
+            ldx   CurrentNPCIndex
+            txa
+            clc
+            adc   #NPC_SLOT_BASE+1
+            pha
+            ldx   CurrentNPCIndex
+            lda   NPCBotFlags,x
+            pha
+            lda   NPCBotAddr,x
+            pha
+            _GTEUpdateSprite
+            rts
+
+:hide_sprite
+            ; Hide sprite
+            lda   CurrentNPCIndex
+            clc
+            adc   #NPC_SLOT_BASE
+            pha
+            pea   SPRITE_HIDE
+            ldx   CurrentNPCIndex
+            lda   NPCTopAddr,x
+            pha
+            _GTEUpdateSprite
+
+            ldx   CurrentNPCIndex
+            txa
+            clc
+            adc   #NPC_SLOT_BASE+1
+            pha
+            pea   SPRITE_HIDE
+            ldx   CurrentNPCIndex
+            lda   NPCBotAddr,x
+            pha
+            _GTEUpdateSprite
             rts
 
 ; ========================================
