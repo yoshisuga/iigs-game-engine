@@ -52,6 +52,7 @@ NPCCharacterID  ds  MAX_NPCS*2  ; Dialog character ID (for friendly NPCs)
 NPCHealth       ds  MAX_NPCS*2  ; Current health (0=dead)
 NPCMaxHealth    ds  MAX_NPCS*2  ; Maximum health
 NPCDamage       ds  MAX_NPCS*2  ; Damage dealt to player on collision
+NPCInvincibilityTimer ds MAX_NPCS*2 ; Frames remaining of invincibility
 
 ; AI data
 NPCAIType       ds  MAX_NPCS*2  ; AI behavior type (AI_NONE, AI_PATROL, etc.)
@@ -132,6 +133,7 @@ InitNPCs
             stz   NPCHealth,x
             stz   NPCMaxHealth,x
             stz   NPCDamage,x
+            stz   NPCInvincibilityTimer,x
             stz   NPCAIType,x
             stz   NPCState,x
             stz   NPCSpeed,x
@@ -591,6 +593,11 @@ SpawnEnemy
             lda   #NPC_HOSTILE     ; Friendly (triggers dialog)
             sta   NPCBehavior,x
             stz   NPCCharacterID,x
+
+            ; Combat stats
+            lda   #100
+            sta   NPCHealth,x
+            sta   NPCMaxHealth,x
 
             ; Set AI: Patrol with chase behavior
             lda   #AI_PATROL
@@ -1206,7 +1213,9 @@ UpdateAllNPCs
             ; Check if active
             lda   NPCActive,x
             bne   :active
-            jmp   :next             ; Not active, skip to next NPC
+
+            ; Not active - skip (sprites already removed in NPCTakeDamage)
+            jmp   :next
 
 :active
             ; Update screen position from scroll
@@ -1534,6 +1543,195 @@ CalculateNPCDistance
             rts
 
 ; ========================================
+; NPC COMBAT SYSTEM
+; ========================================
+
+UpdateAllNPCInvincibility
+; Decrement invincibility timer for all active NPCs
+            stz   CurrentNPCIndex
+:loop
+            ldx   CurrentNPCIndex
+
+            ; Check if active
+            lda   NPCActive,x
+            beq   :next
+
+            ; Decrement invincibility timer if > 0
+            lda   NPCInvincibilityTimer,x
+            beq   :next
+            dec   a
+            sta   NPCInvincibilityTimer,x
+
+:next
+            lda   CurrentNPCIndex
+            clc
+            adc   #2
+            sta   CurrentNPCIndex
+            cmp   #MAX_NPCS*2
+            bcc   :loop
+            rts
+
+NPCTakeDamage
+; NPC takes damage from player
+; Input: A = damage amount
+;        X = NPC index
+; Preserves: X register
+            ; Save NPC index and damage
+            phx
+            sta   Tmp0              ; Save damage amount
+
+            ; Check if NPC is invincible
+            lda   NPCInvincibilityTimer,x
+            bne   :skip_damage      ; Still invincible
+
+            ; Subtract from health (no defense for NPCs yet)
+            lda   NPCHealth,x
+            sec
+            sbc   Tmp0
+            bpl   :set_health
+            lda   #0                ; Can't go below 0
+:set_health
+            sta   NPCHealth,x
+
+            ; Set invincibility period (10 frames, same as player)
+            lda   #10
+            sta   NPCInvincibilityTimer,x
+
+            ; Check if dead
+            lda   NPCHealth,x
+            bne   :apply_knockback
+
+            ; NPC died - deactivate and hide sprites
+            stz   NPCActive,x
+
+            ; Hide sprites using SPRITE_HIDE flag (like Zelda demo does)
+            plx                     ; Get NPC index
+            phx                     ; Save again
+            txa
+            clc
+            adc   #NPC_SLOT_BASE
+            pha                     ; Top sprite slot
+            pea   SPRITE_HIDE       ; Hide flag
+            lda   NPCTopAddr,x      ; Keep same sprite data
+            pha
+            _GTEUpdateSprite
+
+            plx
+            phx
+            txa
+            clc
+            adc   #NPC_SLOT_BASE+1
+            pha                     ; Bottom sprite slot
+            pea   SPRITE_HIDE       ; Hide flag
+            ldx   CurrentNPCIndex   ; Restore X
+            lda   NPCBotAddr,x      ; Keep same sprite data
+            pha
+            _GTEUpdateSprite
+
+            bra   :skip_damage
+
+:apply_knockback
+            ; Apply knockback (push enemy away from player)
+            plx                     ; Restore NPC index
+            phx                     ; Save again
+            jsr   ApplyNPCKnockback
+
+:skip_damage
+            plx                     ; Restore X
+            rts
+
+ApplyNPCKnockback
+; Push NPC away from player on collision
+; Input: X = NPC index (must be preserved)
+            phx                     ; Save NPC index
+
+            ; Calculate direction from player to NPC
+            lda   NPCGlobalX,x
+            sec
+            sbc   PlayerGlobalX
+            sta   Tmp0              ; Tmp0 = dx (NPC X - player X)
+
+            lda   NPCGlobalY,x
+            sec
+            sbc   PlayerGlobalY
+            sta   Tmp1              ; Tmp1 = dy (NPC Y - player Y)
+
+            ; Determine if collision is more horizontal or vertical
+            lda   Tmp0
+            bpl   :dx_positive
+            eor   #$FFFF
+            inc   a
+:dx_positive
+            sta   Tmp2              ; Tmp2 = abs(dx)
+
+            lda   Tmp1
+            bpl   :dy_positive
+            eor   #$FFFF
+            inc   a
+:dy_positive
+            sta   Tmp3              ; Tmp3 = abs(dy)
+
+            ; Compare
+            lda   Tmp2
+            cmp   Tmp3
+            bcs   :horizontal_knockback
+
+:vertical_knockback
+            ; Push along Y axis
+            lda   Tmp1              ; dy
+            bpl   :push_down
+:push_up
+            ; NPC is above player, push up
+            ldx   CurrentNPCIndex
+            lda   NPCGlobalY,x
+            sec
+            sbc   #8                ; Knockback distance
+            bpl   :set_y
+            lda   #0
+            bra   :set_y
+:push_down
+            ; NPC is below player, push down
+            ldx   CurrentNPCIndex
+            lda   NPCGlobalY,x
+            clc
+            adc   #8
+            cmp   #512
+            bcc   :set_y
+            lda   #511
+:set_y
+            sta   NPCGlobalY,x
+            bra   :done
+
+:horizontal_knockback
+            ; Push along X axis
+            lda   Tmp0              ; dx
+            bpl   :push_right
+:push_left
+            ; NPC is left of player, push left
+            ldx   CurrentNPCIndex
+            lda   NPCGlobalX,x
+            sec
+            sbc   #8
+            bpl   :set_x
+            lda   #0
+            bra   :set_x
+:push_right
+            ; NPC is right of player, push right
+            ldx   CurrentNPCIndex
+            lda   NPCGlobalX,x
+            clc
+            adc   #8
+            cmp   #960
+            bcc   :set_x
+            lda   #959
+:set_x
+            sta   NPCGlobalX,x
+
+:done
+            plx                     ; Restore NPC index
+            rts
+
+; ========================================
 ; COLLISION DETECTION
 ; ========================================
 
@@ -1613,10 +1811,18 @@ CheckAllNPCCollisions
             bra   :mark_colliding
 
 :hostile_npc
-            ; Hostile NPC - deal damage to player (knockback handled in TakeDamage)
+            ; Hostile NPC - MUTUAL DAMAGE (both player and enemy take damage)
             ldx   CurrentNPCIndex
+
+            ; Player takes damage from enemy
             lda   NPCDamage,x        ; Get NPC's damage
             jsr   TakeDamage         ; Player takes damage and knockback (X preserved)
+
+            ; Enemy takes damage from player
+            ldx   CurrentNPCIndex    ; Restore X
+            lda   PlayerAttack       ; Get player's attack
+            jsr   NPCTakeDamage      ; Enemy takes damage and knockback (X preserved)
+
             ldx   CurrentNPCIndex    ; Restore X to be safe
             ; Fall through to mark collision
 

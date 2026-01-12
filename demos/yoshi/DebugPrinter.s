@@ -199,29 +199,7 @@ BuildDebugStr
             lda   NumStr+4
             sta   DebugStr+38
 
-            ; Add health display
-            lda   #' '
-            sta   DebugStr+39
-            lda   #'H'
-            sta   DebugStr+40
-            lda   #'P'
-            sta   DebugStr+41
-            lda   #':'
-            sta   DebugStr+42
-            rep   #$20             ; Back to 16-bit A
-
-            lda   PlayerHealth
-            jsr   Num2Str4
-
-            sep   #$20             ; Switch to 8-bit A
-            lda   NumStr+2         ; Skip thousands
-            sta   DebugStr+43
-            lda   NumStr+3
-            sta   DebugStr+44
-            lda   NumStr+4
-            sta   DebugStr+45
-
-            lda   #46              ; Update length to include HP
+            lda   #38              ; Update length to include HP
             sta   DebugStr
 
             rep   #$20             ; Back to 16-bit A
@@ -398,55 +376,14 @@ BuildDebugStr
             adc   #'0'
             sta   DebugStr2+39
 
-            lda   #' '
-            sta   DebugStr2+40
-            lda   #'N'
-            sta   DebugStr2+41
-            lda   #'F'
-            sta   DebugStr2+42
-            lda   #':'
-            sta   DebugStr2+43
-            lda   NPCFrame,x
-            clc
-            adc   #'0'
-            sta   DebugStr2+44
-
-            lda   #' '
-            sta   DebugStr2+45
-            lda   #'P'
-            sta   DebugStr2+46
-            lda   #'D'
-            sta   DebugStr2+47
-            lda   #'R'
-            sta   DebugStr2+48
-            lda   #':'
-            sta   DebugStr2+49
-            lda   NPCPatrolDir,x
-            clc
-            adc   #'0'
-            sta   DebugStr2+50
-
-            lda   #' '
-            sta   DebugStr2+51
-            lda   #'S'
-            sta   DebugStr2+52
-            lda   #'T'
-            sta   DebugStr2+53
-            lda   #':'
-            sta   DebugStr2+54
-            lda   NPCState,x
-            clc
-            adc   #'0'
-            sta   DebugStr2+55
-
-            lda   #55
+            lda   #39
             sta   DebugStr2             ; Update length
 
             rep   #$20             ; Back to 16-bit A
             rts
 
 BuildEnemyDebugStr
-; Build combat debug string: "PHP:### EHP:### INV:##"
+; Build combat debug string: "PHP:### EHP:### PINV:## EINV:##"
             sep   #$20             ; Switch to 8-bit A
             lda   #'P'
             sta   TestStr+1
@@ -495,14 +432,16 @@ BuildEnemyDebugStr
 
             lda   #' '
             sta   TestStr+16
-            lda   #'I'
+            lda   #'P'
             sta   TestStr+17
-            lda   #'N'
+            lda   #'I'
             sta   TestStr+18
-            lda   #'V'
+            lda   #'N'
             sta   TestStr+19
-            lda   #':'
+            lda   #'V'
             sta   TestStr+20
+            lda   #':'
+            sta   TestStr+21
             rep   #$20             ; Back to 16-bit A
 
             lda   PlayerInvincibilityTimer
@@ -510,11 +449,35 @@ BuildEnemyDebugStr
 
             sep   #$20             ; Switch to 8-bit A
             lda   NumStr+3         ; Last 2 digits
-            sta   TestStr+21
-            lda   NumStr+4
             sta   TestStr+22
+            lda   NumStr+4
+            sta   TestStr+23
 
-            lda   #22              ; String length
+            lda   #' '
+            sta   TestStr+24
+            lda   #'E'
+            sta   TestStr+25
+            lda   #'I'
+            sta   TestStr+26
+            lda   #'N'
+            sta   TestStr+27
+            lda   #'V'
+            sta   TestStr+28
+            lda   #':'
+            sta   TestStr+29
+            rep   #$20             ; Back to 16-bit A
+
+            ldx   #0*2             ; NPC 0 (enemy)
+            lda   NPCInvincibilityTimer,x
+            jsr   Num2Str4
+
+            sep   #$20             ; Switch to 8-bit A
+            lda   NumStr+3         ; Last 2 digits
+            sta   TestStr+30
+            lda   NumStr+4
+            sta   TestStr+31
+
+            lda   #31              ; String length
             sta   TestStr
 
             rep   #$20             ; Back to 16-bit A
