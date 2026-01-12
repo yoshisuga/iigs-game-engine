@@ -477,7 +477,28 @@ BuildEnemyDebugStr
             lda   NumStr+4
             sta   TestStr+31
 
-            lda   #31              ; String length
+            ; Add attack angle indicator (0=back, 1=side, 2=front)
+            lda   #' '
+            sta   TestStr+32
+            lda   #'A'
+            sta   TestStr+33
+            lda   #'N'
+            sta   TestStr+34
+            lda   #'G'
+            sta   TestStr+35
+            lda   #':'
+            sta   TestStr+36
+
+            ; Calculate current attack angle
+            rep   #$20
+            ldx   #0*2              ; NPC 0
+            jsr   CalculateAttackAngle
+            clc
+            adc   #'0'              ; Convert to ASCII
+            sep   #$20
+            sta   TestStr+37
+
+            lda   #37              ; String length
             sta   TestStr
 
             rep   #$20             ; Back to 16-bit A

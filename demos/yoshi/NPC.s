@@ -1815,21 +1815,27 @@ CheckAllNPCCollisions
 
             ; Check if active
             lda   NPCActive,x
-            beq   :next
+            bne   :active
+            jmp   :next             ; Long jump for inactive NPCs
 
+:active
             ; Check collision with player
             jsr   CalculateNPCDistance
             cmp   #16               ; Collision threshold
-            bcs   :no_collision
+            bcc   :colliding        ; If < 16, there's a collision
+            jmp   :no_collision     ; Otherwise no collision
 
+:colliding
             ; Colliding now - check if we were colliding last frame
             lda   NPCWasColliding,x
-            bne   :mark_colliding       ; Was already colliding, don't re-trigger
+            beq   :new_collision        ; Not colliding last frame, new collision!
+            jmp   :mark_colliding       ; Was already colliding, don't re-trigger
 
+:new_collision
             ; New collision! Check NPC type
             lda   NPCBehavior,x
             beq   :friendly_npc
-            bra   :hostile_npc
+            jmp   :hostile_npc          ; Use long jump
 
 :friendly_npc
             ; Trigger dialog for friendly NPCs using lookup table
@@ -1883,18 +1889,47 @@ CheckAllNPCCollisions
             bra   :mark_colliding
 
 :hostile_npc
-            ; Hostile NPC - MUTUAL DAMAGE (both player and enemy take damage)
+            ; Hostile NPC - ANGLE-BASED DAMAGE (Ys-style combat)
             ldx   CurrentNPCIndex
 
-            ; Player takes damage from enemy
-            lda   NPCDamage,x        ; Get NPC's damage
-            jsr   TakeDamage         ; Player takes damage and knockback (X preserved)
+            ; Calculate attack angle (0=back, 1=side, 2=front)
+            jsr   CalculateAttackAngle
+            sta   Tmp5                   ; Save attack angle
 
-            ; Enemy takes damage from player
-            ldx   CurrentNPCIndex    ; Restore X
-            lda   PlayerAttack       ; Get player's attack
-            jsr   NPCTakeDamage      ; Enemy takes damage and knockback (X preserved)
+            ; Adjust damage based on angle
+            lda   Tmp5
+            cmp   #2                     ; Front attack?
+            beq   :front_attack
 
+            ; Back/Side attack - favorable for player
+:favorable_attack
+            ; Enemy takes FULL damage from player
+            ldx   CurrentNPCIndex
+            lda   PlayerAttack
+            jsr   NPCTakeDamage
+
+            ; Player takes HALF damage from enemy
+            ldx   CurrentNPCIndex
+            lda   NPCDamage,x
+            lsr                          ; Divide by 2
+            jsr   TakeDamage
+
+            bra   :done_damage
+
+:front_attack
+            ; Front attack - unfavorable for player
+            ; Enemy takes HALF damage
+            ldx   CurrentNPCIndex
+            lda   PlayerAttack
+            lsr                          ; Divide by 2
+            jsr   NPCTakeDamage
+
+            ; Player takes FULL damage
+            ldx   CurrentNPCIndex
+            lda   NPCDamage,x
+            jsr   TakeDamage
+
+:done_damage
             ldx   CurrentNPCIndex    ; Restore X to be safe
             ; Fall through to mark collision
 
@@ -1916,6 +1951,114 @@ CheckAllNPCCollisions
             brl   :loop              ; Otherwise continue (long branch)
 
 :done       rts
+
+; ========================================
+; ANGLE-BASED COMBAT SYSTEM
+; ========================================
+
+CalculateAttackAngle
+; Determines if player is attacking from back, side, or front
+; Input: X = NPC index (CurrentNPCIndex)
+; Output: A = 0 (back), 1 (side), 2 (front)
+; Uses: Tmp0-Tmp3
+            ; Get direction vector from NPC to player
+            lda   PlayerGlobalX
+            sec
+            sbc   NPCGlobalX,x
+            sta   Tmp0              ; dx = player X - enemy X
+
+            lda   PlayerGlobalY
+            sec
+            sbc   NPCGlobalY,x
+            sta   Tmp1              ; dy = player Y - enemy Y
+
+            ; Get NPC facing direction (0=Down, 1=Right, 2=Left, 3=Up)
+            lda   NPCDirection,x
+            cmp   #DIR_DOWN
+            beq   :facing_down
+            cmp   #DIR_UP
+            beq   :facing_up
+            cmp   #DIR_LEFT
+            beq   :facing_left
+            ; Must be DIR_RIGHT
+            bra   :facing_right
+
+:facing_down
+            ; Enemy facing down (+Y)
+            ; Front = player is below enemy (dy > 0)
+            ; Back = player is above enemy (dy < 0)
+            ; Side = mostly horizontal (abs(dx) > abs(dy))
+            jsr   CompareAbsValues  ; Compare abs(dx) vs abs(dy)
+            bcs   :return_side      ; dx bigger = side attack
+
+            lda   Tmp1              ; Check dy
+            bpl   :return_front     ; dy positive = front
+            bra   :return_back      ; dy negative = back
+
+:facing_up
+            ; Enemy facing up (-Y)
+            jsr   CompareAbsValues
+            bcs   :return_side
+
+            lda   Tmp1              ; Check dy
+            bmi   :return_front     ; dy negative = front
+            bra   :return_back      ; dy positive = back
+
+:facing_left
+            ; Enemy facing left (-X)
+            jsr   CompareAbsValues
+            bcc   :check_left_x     ; dy bigger, check if mostly vertical
+
+            lda   Tmp0              ; dx bigger, check dx
+            bmi   :return_front     ; dx negative = front
+            bra   :return_back      ; dx positive = back
+
+:check_left_x
+            bra   :return_side      ; Mostly vertical = side
+
+:facing_right
+            ; Enemy facing right (+X)
+            jsr   CompareAbsValues
+            bcc   :check_right_x
+
+            lda   Tmp0              ; Check dx
+            bpl   :return_front     ; dx positive = front
+            bra   :return_back      ; dx negative = back
+
+:check_right_x
+            bra   :return_side
+
+:return_back
+            lda   #0
+            rts
+:return_side
+            lda   #1
+            rts
+:return_front
+            lda   #2
+            rts
+
+CompareAbsValues
+; Compare abs(Tmp0) with abs(Tmp1)
+; Sets carry if abs(Tmp0) >= abs(Tmp1)
+; Uses: Tmp2, Tmp3
+            lda   Tmp0
+            bpl   :dx_pos
+            eor   #$FFFF
+            inc   a
+:dx_pos
+            sta   Tmp2              ; abs(dx)
+
+            lda   Tmp1
+            bpl   :dy_pos
+            eor   #$FFFF
+            inc   a
+:dy_pos
+            sta   Tmp3              ; abs(dy)
+
+            lda   Tmp2
+            cmp   Tmp3              ; Compare abs(dx) vs abs(dy)
+            rts                     ; Carry set if dx >= dy
 
 ; ========================================
 ; DIALOG DATA - Character-based lookup system
